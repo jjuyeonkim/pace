@@ -52,6 +52,8 @@ dycore_config:
   d2_bg: 0.
   d4_bg: 0.12
   dddmp: 0.0
+  # TODO: remove damp?
+  do_vort_damp: false
   hord_dp: 8
   hord_mt: 8
   hord_tm: 8

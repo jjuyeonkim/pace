@@ -12,6 +12,7 @@ dirname = os.path.dirname(os.path.abspath(__file__))
 EXAMPLE_CONFIGS_DIR = os.path.join(dirname, "../../../examples/configs/")
 
 TESTED_CONFIGS: List[str] = [
+    "rhwave_c12.yaml",
     "baroclinic_c12.yaml",
     "baroclinic_c12_dp.yaml",
     "baroclinic_c12_explicit_physics.yaml",
