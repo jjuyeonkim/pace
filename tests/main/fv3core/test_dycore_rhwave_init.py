@@ -169,7 +169,6 @@ def test_temporaries_are_deterministic():
     second_temporaries = copy_temporaries(dycore2, max_depth=10)
     assert_same_temporaries(second_temporaries, first_temporaries)
 
-
 def test_call_on_same_state_same_dycore_produces_same_temporaries():
     """
     Assuming the precursor test passes, this test indicates whether
