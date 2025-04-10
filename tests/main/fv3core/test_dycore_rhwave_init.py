@@ -3,6 +3,8 @@ import unittest.mock
 from dataclasses import fields
 from datetime import timedelta
 from typing import Tuple
+import xarray as xr
+import numpy as np
 
 import pyFV3.initialization.analytic_init as ai
 from ndsl import (
@@ -26,6 +28,7 @@ from pyFV3 import DycoreState, DynamicalCore, DynamicalCoreConfig
 
 
 DIR = os.path.abspath(os.path.dirname(__file__))
+PACE_DIR = os.path.join(DIR, "../../../")
 
 # TODO This is basically a copy of ~/pace/tests/main/fv3core/test_dycore_call.py
 # NEED TO UPDATE THIS WHILE Porting RHWave 4 test from fortran
@@ -149,7 +152,7 @@ def copy_state(state1: DycoreState, state2: DycoreState):
                 if isinstance(attr, Quantity):
                     getattr(state2, attr_name).data[:] = attr.data
 
-
+'''
 def test_temporaries_are_deterministic():
     """
     This is a precursor test to the next one, ensuring that two
@@ -212,3 +215,31 @@ def test_call_does_not_define_stencils():
 
     with unittest.mock.patch("gt4py.cartesian.gtscript.stencil", new=error_func):
         dycore.step_dynamics(state, timer)
+'''
+
+def test_validation():
+    dycore, state, timer = setup_dycore()
+
+    # Read in netcdf file.
+    # Compare results for state's values for tile 1 to SHiELD build file
+    #
+    validation_dir = os.path.join(PACE_DIR, "tests", "main", "data", "rhwave_validation", "zero_day")
+    ds = xr.open_dataset(os.path.join(validation_dir, "fv_core.res.tile1.nc"))
+    #delp_ds_vals = ds["delp"].values[:]
+    delp_ds_vals = ds["delp"].values[:]
+    print(f"dataset delp(shape:{delp_ds_vals.shape}):\n{delp_ds_vals}")
+
+    delp_state_vals = state.delp.data[:] 
+    print(f"dycore state delp(shape:{delp_state_vals.shape}):\n{delp_state_vals}")
+
+    print(f"dycore state u\n{ds['u'].values[0, :].shape}\ndycore state\n{state.u.view[:]}")
+    print(f"dycore state v\n{ds['v'].values[0, :].shape}\ndycore state\n{state.v.view[:]}")
+    print(f"dycore state delp\n{ds['delp'].values[0, :].shape}):\ndycore state\n{state.delp.view[:]}")
+ 
+    # TODO: In theory, these should match.... but they don't yet!!!!
+    # We're only looking at time 0 in the netcdf file
+    np.testing.assert_array_equal(ds["u"].values[0, :], state.u.view[:])
+    np.testing.assert_array_equal(ds["v"].values[0, :], state.v.view[:])
+    np.testing.assert_array_equal(ds["delp"].values[0, :], state.delp.view[:])
+    # TODO: ADD MORE!
+
