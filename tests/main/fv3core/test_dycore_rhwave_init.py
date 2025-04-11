@@ -41,43 +41,43 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
         npy=13,
         npz=79,
         ntiles=6,
-        nwat=6,
+        nwat=6,            # TODO: Fortran test is 0, only nwat=6 is implemented in pace; How to change?
         dt_atmos=225,
-        a_imp=1.0,
+        a_imp=1.0,         # TODO: What is fortran equiv?
         beta=0.0,
         consv_te=False,  # not implemented, needs allreduce
         d2_bg=0.0,
-        d2_bg_k1=0.2,
-        d2_bg_k2=0.1,
+        d2_bg_k1=0.2,      # TODO: What is fortran equiv?
+        d2_bg_k2=0.1,      # TODO: What is fortran equiv?
         d4_bg=0.15,
-        d_con=1.0,
-        d_ext=0.0,
-        dddmp=0.5,
-        delt_max=0.002,
-        do_sat_adj=True,
-        do_vort_damp=True,
-        fill=True,
+        d_con=1.0,         # TODO: What is fortran equiv?
+        d_ext=0.0,         # TODO: What is fortran equiv?
+        dddmp=0.0,
+        delt_max=0.002,    # TODO: What is fortran equiv?
+        do_sat_adj=True,   # TODO: What is fortran equiv?
+        do_vort_damp=True, # TODO: What is fortran equiv?
+        fill=True,         # TODO: What is fortran equiv?
         hord_dp=6,
         hord_mt=6,
         hord_tm=6,
         hord_tr=8,
         hord_vt=6,
-        hydrostatic=False,
-        k_split=1,
-        ke_bg=0.0,
-        kord_mt=9,
-        kord_tm=-9,
-        kord_tr=9,
-        kord_wz=9,
+        hydrostatic=False, # TODO: What is fortran equiv?
+        k_split=1,         # TODO: What is fortran equiv?
+        ke_bg=0.0,         # TODO: What is fortran equiv?
+        kord_mt=9,         # TODO: What is fortran equiv?
+        kord_tm=-9,        # TODO: What is fortran equiv?
+        kord_tr=9,         # TODO: What is fortran equiv?
+        kord_wz=9,         # TODO: What is fortran equiv?
         n_split=1,
         nord=3,
-        p_fac=0.05,
-        rf_fast=True,
-        rf_cutoff=3000.0,
-        tau=10.0,
-        vtdm4=0.06,
-        z_tracer=True,
-        do_qa=True,
+        p_fac=0.05,        # TODO: What is fortran equiv?
+        rf_fast=True,      # TODO: What is fortran equiv?
+        rf_cutoff=3000.0,  # TODO: What is fortran equiv?
+        tau=10.0,          # TODO: What is fortran equiv?
+        vtdm4=0.06,        # TODO: What is fortran equiv?
+        z_tracer=True,     # TODO: What is fortran equiv?
+        do_qa=True,        # TODO: What is fortran equiv?
     )
     mpi_comm = NullComm(
         rank=0, total_ranks=6 * config.layout[0] * config.layout[1], fill_value=0.0
@@ -106,6 +106,7 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
     )
     quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
     eta_file = "tests/main/input/eta79.nc"
+    #eta_file = None
     metric_terms = MetricTerms(
         quantity_factory=quantity_factory,
         communicator=communicator,
@@ -123,6 +124,7 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
         moist_phys=config.moist_phys,
         comm=communicator,
     )
+    print(f"***SETUP A*** state.delp ()\n{state.delp}")
     stencil_factory = StencilFactory(
         config=stencil_config,
         grid_indexing=grid_indexing,
@@ -140,7 +142,8 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
         state=state,
     )
 
-    return dycore, state, NullTimer()
+    #return dycore, state, NullTimer()
+    return None, state, NullTimer()
 
 
 def copy_state(state1: DycoreState, state2: DycoreState):
@@ -223,19 +226,23 @@ def test_validation():
     # Read in netcdf file.
     # Compare results for state's values for tile 1 to SHiELD build file
     #
-    validation_dir = os.path.join(PACE_DIR, "tests", "main", "data", "rhwave_validation", "zero_day")
+    validation_dir = os.path.join(PACE_DIR, "tests", "main", "data", "rhwave_validation", "zero_time_v3")
     ds = xr.open_dataset(os.path.join(validation_dir, "fv_core.res.tile1.nc"))
-    #delp_ds_vals = ds["delp"].values[:]
-    delp_ds_vals = ds["delp"].values[:]
-    print(f"dataset delp(shape:{delp_ds_vals.shape}):\n{delp_ds_vals}")
 
-    delp_state_vals = state.delp.data[:] 
-    print(f"dycore state delp(shape:{delp_state_vals.shape}):\n{delp_state_vals}")
+    # Dataset
+    desc = 'dataset'
+    #print(f"{desc} u\n{ds['u'].values[0, :].shape}\n{desc} u\n{ds['u'].values[0, :]}")
+    #print(f"{desc} v\n{ds['v'].values[0, :].shape}\n{desc} v\n{ds['v'].values[0, :]}")
+    print(f"{desc} delp\n{ds['delp'].values[0, :].shape}):\n{desc} delp\n{ds['delp'].values[0, :]}")
+    
+    # Dycore
+    desc = 'dycore state'
+    #print(f"{desc} u\n{state.u.view[:].shape}\n{desc} u\n{state.u.view[:]}")
+    #print(f"{desc} v\n{state.v.view[:].shape}\n{desc} v\n{state.v.view[:]}")
+    # TODO:  WHY IS THIS VIEW SO DIFFERENT
+    print(f"{desc} delp\n:\n{desc} delp\n{state.delp}")
+    print(f"{desc} delp\n{state.delp.view[:].shape}):\n{desc} delp\n{state.delp.view[:]}")
 
-    print(f"dycore state u\n{ds['u'].values[0, :].shape}\ndycore state\n{state.u.view[:]}")
-    print(f"dycore state v\n{ds['v'].values[0, :].shape}\ndycore state\n{state.v.view[:]}")
-    print(f"dycore state delp\n{ds['delp'].values[0, :].shape}):\ndycore state\n{state.delp.view[:]}")
- 
     # TODO: In theory, these should match.... but they don't yet!!!!
     # We're only looking at time 0 in the netcdf file
     np.testing.assert_array_equal(ds["u"].values[0, :], state.u.view[:])
