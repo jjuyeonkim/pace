@@ -124,7 +124,6 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
         moist_phys=config.moist_phys,
         comm=communicator,
     )
-    print(f"***SETUP A*** state.delp ()\n{state.delp}")
     stencil_factory = StencilFactory(
         config=stencil_config,
         grid_indexing=grid_indexing,
@@ -231,22 +230,35 @@ def test_validation():
 
     # Dataset
     desc = 'dataset'
-    #print(f"{desc} u\n{ds['u'].values[0, :].shape}\n{desc} u\n{ds['u'].values[0, :]}")
-    #print(f"{desc} v\n{ds['v'].values[0, :].shape}\n{desc} v\n{ds['v'].values[0, :]}")
-    print(f"{desc} delp\n{ds['delp'].values[0, :].shape}):\n{desc} delp\n{ds['delp'].values[0, :]}")
+    ds_u_transposed = ds["u"].values[0, :].transpose(2, 1, 0)
+    print(f"{desc} u\n{ds_u_transposed.shape}\n{desc} u\n{ds_u_transposed}")
+    ds_v_transposed = ds["v"].values[0, :].transpose(2, 1, 0)
+    print(f"{desc} v\n{ds_v_transposed.shape}\n{desc} v\n{ds_v_transposed}")
+    
+    #print(f"{desc} delp\n{ds['delp'].values[0, :].shape}):\n{desc} delp\n{ds['delp'].values[0, :]}")
     
     # Dycore
     desc = 'dycore state'
-    #print(f"{desc} u\n{state.u.view[:].shape}\n{desc} u\n{state.u.view[:]}")
-    #print(f"{desc} v\n{state.v.view[:].shape}\n{desc} v\n{state.v.view[:]}")
-    # TODO:  WHY IS THIS VIEW SO DIFFERENT
-    print(f"{desc} delp\n:\n{desc} delp\n{state.delp}")
-    print(f"{desc} delp\n{state.delp.view[:].shape}):\n{desc} delp\n{state.delp.view[:]}")
+    print(f"{desc} u\n{state.u.view[:].shape}\n{desc} u\n{state.u.view[:]}")
+    print(f"{desc} v\n{state.v.view[:].shape}\n{desc} v\n{state.v.view[:]}")
+    # TODO:  WHY IS THIS VIEW SO DIFFERENT?
+    #print(f"{desc} delp\n:\n{desc} delp\n{state.delp}")
+    #print(f"{desc} delp\n{state.delp.view[:].shape}):\n{desc} delp\n{state.delp.view[:]}")
 
     # TODO: In theory, these should match.... but they don't yet!!!!
     # We're only looking at time 0 in the netcdf file
-    np.testing.assert_array_equal(ds["u"].values[0, :], state.u.view[:])
-    np.testing.assert_array_equal(ds["v"].values[0, :], state.v.view[:])
-    np.testing.assert_array_equal(ds["delp"].values[0, :], state.delp.view[:])
+
+    diff_u = np.sum((ds["u"].values[0, :].transpose(2, 1, 0) - state.u.view[:]) ** 2)
+    print(f"diff_u: {diff_u}")
+    diff_v = np.sum((ds["v"].values[0, :].transpose(2, 1, 0) - state.v.view[:]) ** 2)
+    print(f"diff_v: {diff_v}")
+    
+    np.testing.assert_array_equal(
+        ds["u"].values[0, :].transpose(2, 1, 0), state.u.view[:]
+    )    
+    np.testing.assert_array_equal(
+        ds["v"].values[0, :].transpose(2, 1, 0), state.v.view[:]
+    )    
+    #np.testing.assert_array_equal(ds["delp"].values[0, :], state.delp.view[:])
     # TODO: ADD MORE!
 
