@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Tuple
 import xarray as xr
 import numpy as np
+import matplotlib.pyplot as plt
 
 import pyFV3.initialization.analytic_init as ai
 from ndsl import (
@@ -219,6 +220,44 @@ def test_call_does_not_define_stencils():
         dycore.step_dynamics(state, timer)
 '''
 
+def plot_wind_diff(diff_data, description, filename):
+    """ Generated originally from Gemini and modified """
+    print(f"{description} shape: {diff_data.shape}")
+
+    # Calculate the number of rows and columns for the subplots
+    num_rows = 8
+    num_cols = 10
+    num_plots = num_rows * num_cols
+
+    # Create a figure and a grid of subplots
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(40, 40))
+
+    # Loop through each subplot and add data
+    for i in range(diff_data.shape[2]): 
+        print(f"{i} shape: {diff_data[:,:,i].shape}")
+        row_index = i // num_cols
+        col_index = i % num_cols
+        ax = axes[row_index, col_index]
+    
+        # Generate random data for each subplot
+        x_data = np.linspace(0, 10, 100)
+        y_data = np.random.rand(100)
+    
+        # Plot the data on the subplot
+        ax.imshow(diff_data[:,:,i], cmap='viridis')
+        #ax.colorbar()
+    
+        # Set the title for the subplot
+        ax.set_title(f'z={i}')
+
+    # Adjust spacing between subplots
+    plt.tight_layout()
+
+    #plt.savefig('rhwave_diff_u.png')
+    plt.savefig(filename)
+    plt.clf()
+
+    
 def test_validation():
     dycore, state, timer = setup_dycore()
 
@@ -231,34 +270,62 @@ def test_validation():
     # Dataset
     desc = 'dataset'
     ds_u_transposed = ds["u"].values[0, :].transpose(2, 1, 0)
-    print(f"{desc} u\n{ds_u_transposed.shape}\n{desc} u\n{ds_u_transposed}")
+    #print(f"{desc} u\n{ds_u_transposed.shape}\n{desc} u\n{ds_u_transposed}")
     ds_v_transposed = ds["v"].values[0, :].transpose(2, 1, 0)
-    print(f"{desc} v\n{ds_v_transposed.shape}\n{desc} v\n{ds_v_transposed}")
+    #print(f"{desc} v\n{ds_v_transposed.shape}\n{desc} v\n{ds_v_transposed}")
     
-    #print(f"{desc} delp\n{ds['delp'].values[0, :].shape}):\n{desc} delp\n{ds['delp'].values[0, :]}")
+    ds_delp_transposed = ds["delp"].values[0, :].transpose(2, 1, 0)
+    print(f"{desc} delp\n{ds_delp_transposed.shape}\n{desc} delp\n{ds_delp_transposed}")
     
     # Dycore
     desc = 'dycore state'
-    print(f"{desc} u\n{state.u.view[:].shape}\n{desc} u\n{state.u.view[:]}")
-    print(f"{desc} v\n{state.v.view[:].shape}\n{desc} v\n{state.v.view[:]}")
+    #print(f"{desc} u\n{state.u.view[:].shape}\n{desc} u\n{state.u.view[:]}")
+    #print(f"{desc} v\n{state.v.view[:].shape}\n{desc} v\n{state.v.view[:]}")
     # TODO:  WHY IS THIS VIEW SO DIFFERENT?
-    #print(f"{desc} delp\n:\n{desc} delp\n{state.delp}")
-    #print(f"{desc} delp\n{state.delp.view[:].shape}):\n{desc} delp\n{state.delp.view[:]}")
+    print(f"{desc} delp\n{state.delp.view[:].shape}):\n{desc} delp\n{state.delp.view[:]}")
 
     # TODO: In theory, these should match.... but they don't yet!!!!
     # We're only looking at time 0 in the netcdf file
 
-    diff_u = np.sum((ds["u"].values[0, :].transpose(2, 1, 0) - state.u.view[:]) ** 2)
-    print(f"diff_u: {diff_u}")
-    diff_v = np.sum((ds["v"].values[0, :].transpose(2, 1, 0) - state.v.view[:]) ** 2)
-    print(f"diff_v: {diff_v}")
-    
+    '''
+    plt.title("Diff NetCDF vs Pace Dycore State 'u'")
+    diff_u_0 = ds["u"].values[0, :].transpose(2, 1, 0)[:,:,0] - state.u.view[:,:,0]
+    plt.imshow(diff_u_0, cmap='viridis')
+    plt.colorbar()
+    plt.savefig("rhwave_diff_u_0.png")
+    plt.clf()
+
+    plt.title("Diff NetCDF vs Pace Dycore State 'v'")
+    diff_v_0 = ds["v"].values[0, :].transpose(2, 1, 0)[:,:,0] - state.v.view[:,:,0]
+    plt.imshow(diff_v_0, cmap='viridis')
+    plt.colorbar()
+    plt.savefig("rhwave_diff_v_0.png")
+    plt.clf()
+
+    diff_u = ds["u"].values[0, :].transpose(2, 1, 0) - state.u.view[:]
+    plot_wind_diff(diff_u, "u_winds", "rhwave_diff_u_all.png")
+
+    diff_v = ds["v"].values[0, :].transpose(2, 1, 0) - state.v.view[:]
+    plot_wind_diff(diff_v, "v_winds", "rhwave_diff_v_all.png")
+        
+    mse_u = np.sum((ds["u"].values[0, :].transpose(2, 1, 0) - state.u.view[:]) ** 2)
+    print(f"mse_u: {mse_u}")
+    mse_v = np.sum((ds["v"].values[0, :].transpose(2, 1, 0) - state.v.view[:]) ** 2)
+    print(f"mse_v: {mse_v}")
+
+    '''
     np.testing.assert_array_equal(
         ds["u"].values[0, :].transpose(2, 1, 0), state.u.view[:]
     )    
     np.testing.assert_array_equal(
         ds["v"].values[0, :].transpose(2, 1, 0), state.v.view[:]
     )    
+    np.testing.assert_array_equal(
+        ds["delp"].values[0, :].transpose(2, 1, 0), state.delp.view[:]
+    )    
+    #np.testing.assert_array_equal(
+    #    ds["ps"].values[0, :].transpose(2, 1, 0), state.ps.view[:]
+    #)    
     #np.testing.assert_array_equal(ds["delp"].values[0, :], state.delp.view[:])
     # TODO: ADD MORE!
 
