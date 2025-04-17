@@ -155,71 +155,6 @@ def copy_state(state1: DycoreState, state2: DycoreState):
                 if isinstance(attr, Quantity):
                     getattr(state2, attr_name).data[:] = attr.data
 
-'''
-def test_temporaries_are_deterministic():
-    """
-    This is a precursor test to the next one, ensuring that two
-    identically-initialized dycores called on identically-initialized
-    states produce identical temporaries.
-
-    This will fail if there is non-determinism in the initialization,
-    for example from using `empty` instead of `zeros` to initialize data.
-    """
-    dycore1, state1, timer1 = setup_dycore()
-    dycore2, state2, timer2 = setup_dycore()
-
-    dycore1.step_dynamics(state1, timer1)
-    first_temporaries = copy_temporaries(dycore1, max_depth=10)
-    assert len(first_temporaries) > 0
-    dycore2.step_dynamics(state2, timer2)
-    second_temporaries = copy_temporaries(dycore2, max_depth=10)
-    assert_same_temporaries(second_temporaries, first_temporaries)
-
-def test_call_on_same_state_same_dycore_produces_same_temporaries():
-    """
-    Assuming the precursor test passes, this test indicates whether
-    the dycore retains and re-uses internal state on subsequent calls.
-    If it does not, then subsequent calls on identical input should
-    produce identical results.
-    """
-    dycore, state_1, timer_1 = setup_dycore()
-    _, state_2, timer_2 = setup_dycore()
-
-    # state_1 and state_2 are identical, if the dycore is stateless then they
-    # should produce identical dycore final states when used to call
-    dycore.step_dynamics(state_1, timer_1)
-    first_temporaries = copy_temporaries(dycore, max_depth=10)
-    assert len(first_temporaries) > 0
-    # TODO: The orchestrated code pushed us to make the dycore stateful for halo
-    # exchange, so we must copy into state_1 instead of using state_2.
-    # We should call with state_2 directly when this is fixed.
-    copy_state(state_2, state_1)
-    dycore.step_dynamics(state_1, timer_2)
-    second_temporaries = copy_temporaries(dycore, max_depth=10)
-    assert_same_temporaries(second_temporaries, first_temporaries)
-
-
-def test_call_does_not_allocate_storages():
-    dycore, state, timer = setup_dycore()
-
-    def error_func(*args, **kwargs):
-        raise AssertionError("call not allowed")
-
-    with unittest.mock.patch("gt4py.storage.zeros", new=error_func):
-        with unittest.mock.patch("gt4py.storage.empty", new=error_func):
-            dycore.step_dynamics(state, timer)
-
-
-def test_call_does_not_define_stencils():
-    dycore, state, timer = setup_dycore()
-
-    def error_func(*args, **kwargs):
-        raise AssertionError("call not allowed")
-
-    with unittest.mock.patch("gt4py.cartesian.gtscript.stencil", new=error_func):
-        dycore.step_dynamics(state, timer)
-'''
-
 def plot_wind_diff(diff_data, description, filename):
     """ Generated originally from Gemini and modified """
     print(f"{description} shape: {diff_data.shape}")
@@ -257,8 +192,16 @@ def plot_wind_diff(diff_data, description, filename):
     plt.savefig(filename)
     plt.clf()
 
+def plot_2d_diff(attribute, ds_values, state_values):
+    plt.title(f"Diff NetCDF vs Pace Dycore State '{attribute}'")
+    diff = ds_values - state_values
+    plt.imshow(diff, cmap='viridis')
+    plt.colorbar()
+    plt.savefig(f"rhwave_diff_{attribute}_0.png") # TODO: directory somewhere?
+    plt.clf()
     
-def test_validation():
+    
+def test_rhwave_init_validation():
     dycore, state, timer = setup_dycore()
 
     # Read in netcdf file.
@@ -266,66 +209,57 @@ def test_validation():
     #
     validation_dir = os.path.join(PACE_DIR, "tests", "main", "data", "rhwave_validation", "zero_time_v3")
     ds = xr.open_dataset(os.path.join(validation_dir, "fv_core.res.tile1.nc"))
-
-    # Dataset
-    desc = 'dataset'
-    ds_u_transposed = ds["u"].values[0, :].transpose(2, 1, 0)
-    #print(f"{desc} u\n{ds_u_transposed.shape}\n{desc} u\n{ds_u_transposed}")
-    ds_v_transposed = ds["v"].values[0, :].transpose(2, 1, 0)
-    #print(f"{desc} v\n{ds_v_transposed.shape}\n{desc} v\n{ds_v_transposed}")
     
-    ds_delp_transposed = ds["delp"].values[0, :].transpose(2, 1, 0)
-    print(f"{desc} delp\n{ds_delp_transposed.shape}\n{desc} delp\n{ds_delp_transposed}")
-    
-    # Dycore
-    desc = 'dycore state'
-    #print(f"{desc} u\n{state.u.view[:].shape}\n{desc} u\n{state.u.view[:]}")
-    #print(f"{desc} v\n{state.v.view[:].shape}\n{desc} v\n{state.v.view[:]}")
-    # TODO:  WHY IS THIS VIEW SO DIFFERENT?
-    print(f"{desc} delp\n{state.delp.view[:].shape}):\n{desc} delp\n{state.delp.view[:]}")
-
     # TODO: In theory, these should match.... but they don't yet!!!!
     # We're only looking at time 0 in the netcdf file
 
+    ''' TODO: Do we need plots of the whole thing?
+    diff_delp = ds["delp"].values[0, :].transpose(2, 1, 0) - state.delp.view[:]
+    plot_wind_diff(diff_delp, "delp", "rhwave_diff_delp_all.png")    
     '''
-    plt.title("Diff NetCDF vs Pace Dycore State 'u'")
-    diff_u_0 = ds["u"].values[0, :].transpose(2, 1, 0)[:,:,0] - state.u.view[:,:,0]
-    plt.imshow(diff_u_0, cmap='viridis')
-    plt.colorbar()
-    plt.savefig("rhwave_diff_u_0.png")
-    plt.clf()
-
-    plt.title("Diff NetCDF vs Pace Dycore State 'v'")
-    diff_v_0 = ds["v"].values[0, :].transpose(2, 1, 0)[:,:,0] - state.v.view[:,:,0]
-    plt.imshow(diff_v_0, cmap='viridis')
-    plt.colorbar()
-    plt.savefig("rhwave_diff_v_0.png")
-    plt.clf()
-
-    diff_u = ds["u"].values[0, :].transpose(2, 1, 0) - state.u.view[:]
-    plot_wind_diff(diff_u, "u_winds", "rhwave_diff_u_all.png")
-
-    diff_v = ds["v"].values[0, :].transpose(2, 1, 0) - state.v.view[:]
-    plot_wind_diff(diff_v, "v_winds", "rhwave_diff_v_all.png")
         
-    mse_u = np.sum((ds["u"].values[0, :].transpose(2, 1, 0) - state.u.view[:]) ** 2)
-    print(f"mse_u: {mse_u}")
-    mse_v = np.sum((ds["v"].values[0, :].transpose(2, 1, 0) - state.v.view[:]) ** 2)
-    print(f"mse_v: {mse_v}")
+    max_eps_error = 1e-10 
+    plot = True # TODO: Turn this off?
+
+    # 3D Attributes
+    for attribute in ["u", "v", "delp"]:
+        ds_values = ds[attribute].values[0, :].transpose(2, 1, 0)
+        state_values = getattr(state, attribute).view[:]
+        
+        if plot==True:
+            plot_2d_diff(attribute, ds_values[ :, :, 0], state_values[ :, :, 0])
+        
+        max_error = np.max(np.absolute(ds_values - state_values))
+        print(f"{attribute} max_error: {max_error}")
+        assert max_error < max_eps_error # TODO: Can I use assert_almost_equal instead?
+        np.testing.assert_almost_equal(state_values, ds_values, decimal=11)
+
+    # 2D Attributes
+    for attribute in ["phis"]: # TODO: Why is "ps" in DycoreState but  missing in RESTART?
+        print(f"{attribute}:")
+        ds_values = ds[attribute].values[0, :].transpose(1, 0)
+        print(f"ds_values (ds_values.shape): {ds_values}")
+        state_values = getattr(state, attribute).view[:]
+        print(f"state_values (state_values.shape): {state_values}")
+        
+        if plot==True:
+            plot_2d_diff(attribute, ds_values, state_values)
+        
+        max_error = np.max(np.absolute(ds_values - state_values))
+        print(f"{attribute} max_error: {max_error}")
+        assert max_error < max_eps_error # TODO: Can I use assert_almost_equal instead?
+        np.testing.assert_almost_equal(state_values, ds_values, decimal=11)        
+        
+    ''' 
+    TODO: Are these okay?
+    u max_error: 1.2079226507921703e-13
+    v max_error: 9.947598300641403e-14
+    delp max_error: 1.4551915228366852e-11
+    phis max_error: 0.0
 
     '''
-    np.testing.assert_array_equal(
-        ds["u"].values[0, :].transpose(2, 1, 0), state.u.view[:]
-    )    
-    np.testing.assert_array_equal(
-        ds["v"].values[0, :].transpose(2, 1, 0), state.v.view[:]
-    )    
-    np.testing.assert_array_equal(
-        ds["delp"].values[0, :].transpose(2, 1, 0), state.delp.view[:]
-    )    
-    #np.testing.assert_array_equal(
-    #    ds["ps"].values[0, :].transpose(2, 1, 0), state.ps.view[:]
-    #)    
-    #np.testing.assert_array_equal(ds["delp"].values[0, :], state.delp.view[:])
-    # TODO: ADD MORE!
 
+    # TODO: from fv_core.res.nc: ak, bk
+    # TODO: from fv_tracer.res.tile*.nc: cl, cl2, sphum
+    # TODO: from fv_srf_wnd.res.tile*.nc: u_surf, v_surf
+    # TODO: need to check all tiles 1-6?
