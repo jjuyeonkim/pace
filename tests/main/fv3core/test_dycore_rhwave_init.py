@@ -208,47 +208,44 @@ def test_rhwave_init_validation():
     # Compare results for state's values for tile 1 to SHiELD build file
     #
     validation_dir = os.path.join(PACE_DIR, "tests", "main", "data", "rhwave_validation", "zero_time_v3")
-    ds = xr.open_dataset(os.path.join(validation_dir, "fv_core.res.tile1.nc"))
+    core1_ds = xr.open_dataset(os.path.join(validation_dir, "fv_core.res.tile1.nc"))
     
     # TODO: In theory, these should match.... but they don't yet!!!!
     # We're only looking at time 0 in the netcdf file
 
     ''' TODO: Do we need plots of the whole thing?
-    diff_delp = ds["delp"].values[0, :].transpose(2, 1, 0) - state.delp.view[:]
+    diff_delp = core1_ds["delp"].values[0, :].transpose(2, 1, 0) - state.delp.view[:]
     plot_wind_diff(diff_delp, "delp", "rhwave_diff_delp_all.png")    
     '''
         
     max_eps_error = 1e-10 
     plot = True # TODO: Turn this off?
 
-    # 3D Attributes
-    for attribute in ["u", "v", "delp"]:
-        ds_values = ds[attribute].values[0, :].transpose(2, 1, 0)
-        state_values = getattr(state, attribute).view[:]
-        
-        if plot==True:
-            plot_2d_diff(attribute, ds_values[ :, :, 0], state_values[ :, :, 0])
-        
-        max_error = np.max(np.absolute(ds_values - state_values))
-        print(f"{attribute} max_error: {max_error}")
-        assert max_error < max_eps_error # TODO: Can I use assert_almost_equal instead?
-        np.testing.assert_almost_equal(state_values, ds_values, decimal=11)
-
-    # 2D Attributes
-    for attribute in ["phis"]: # TODO: Why is "ps" in DycoreState but  missing in RESTART?
+    # 3D/2D Attributes
+    for attribute in ["u", "v", "delp", "phis"]:
+        # TODO: Why is "ps" in DycoreState but  missing in RESTART?
         print(f"{attribute}:")
-        ds_values = ds[attribute].values[0, :].transpose(1, 0)
-        print(f"ds_values (ds_values.shape): {ds_values}")
         state_values = getattr(state, attribute).view[:]
-        print(f"state_values (state_values.shape): {state_values}")
+        state_ndims = len(getattr(state, attribute).dims)
+        #print(f"state_values (state_values.shape): {state_ndims}\n{state_values}")
+
+        if state_ndims == 2:
+            core1_ds_values = core1_ds[attribute].values[0, :].transpose(1, 0)
+            core1_ds_values_2d, state_values_2d = core1_ds_values, state_values
+        elif state_ndims == 3:
+            core1_ds_values = core1_ds[attribute].values[0, :].transpose(2, 1, 0)
+            core1_ds_values_2d, state_values_2d = core1_ds_values[:,:,0], state_values[:,:,0]
+        else:
+            assert False, f"Unexpected number of dims in DycoreState {attribute}"
+        #print(f"core1_ds_values (core1_ds_values.shape): {core1_ds_values}")
         
         if plot==True:
-            plot_2d_diff(attribute, ds_values, state_values)
+            plot_2d_diff(attribute, core1_ds_values_2d, state_values_2d)
         
-        max_error = np.max(np.absolute(ds_values - state_values))
-        print(f"{attribute} max_error: {max_error}")
+        max_error = np.max(np.absolute(core1_ds_values - state_values))
+        #print(f"{attribute} max_error: {max_error}")
         assert max_error < max_eps_error # TODO: Can I use assert_almost_equal instead?
-        np.testing.assert_almost_equal(state_values, ds_values, decimal=11)        
+        np.testing.assert_almost_equal(state_values, core1_ds_values, decimal=11)        
         
     ''' 
     TODO: Are these okay?
@@ -256,10 +253,18 @@ def test_rhwave_init_validation():
     v max_error: 9.947598300641403e-14
     delp max_error: 1.4551915228366852e-11
     phis max_error: 0.0
-
     '''
 
+    tracer1_ds = xr.open_dataset(os.path.join(validation_dir, "fv_tracer.res.tile1.nc"))    
+    # 3D Attributes
+    for attribute in ["cl", "cl2"]:
+        #Tracer1_ds_values = tracer1_ds[attribute].values[0, :].transpose(2, 1, 0)
+        tracer1_ds_values = tracer1_ds[attribute].values
+        #print(f"tracer1_ds_values {attribute} ({tracer1_ds_values.shape}): {tracer1_ds_values}")    
+    
+    # NOTE: from fv_core.res.tile*.nc: u0, v0 ---> looks like the same as u, v in the restart
+    
     # TODO: from fv_core.res.nc: ak, bk
     # TODO: from fv_tracer.res.tile*.nc: cl, cl2, sphum
-    # TODO: from fv_srf_wnd.res.tile*.nc: u_surf, v_surf
+    # TODO: from fv_srf_wnd.res.tile*.nc: u_srf, v_srf
     # TODO: need to check all tiles 1-6?
