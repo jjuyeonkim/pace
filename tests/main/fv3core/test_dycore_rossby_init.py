@@ -25,6 +25,7 @@ from ndsl import (
     StencilFactory,
     SubtileGridSizer,
     TilePartitioner,
+    TileCommunicator,
 )
 from ndsl.grid import DampingCoefficients, GridData, MetricTerms
 from ndsl.performance.timer import NullTimer, Timer
@@ -38,29 +39,24 @@ ROSSBY_DIR = os.path.join(PACE_DIR, "tests", "main", "data", "rossby_validation"
 
 @pytest.fixture()
 def setenv_pace32(monkeypatch):
-    with mock.patch.dict(os.environ, clear=True):
-        envvars = {
-            "PACE_FLOAT_PRECISION": "32",
-        }
-        for k, v in envvars.items():
-            monkeypatch.setenv(k, v)
-        yield # This is the magical bit which restore the environment after 
+    #TODO: doublecheck monkey patch fixture?
+    #Monkeypatching: https://docs.pytest.org/en/stable/how-to/monkeypatch.html
+    #Fixture example found here: https://stackoverflow.com/questions/77255758/how-can-i-mock-my-environment-variables-for-my-pytest
+    #https://github.com/pytest-dev/pytest/issues/4576
+    #https://docs.python.org/3/library/unittest.mock.html#unittest.mock.patch.dict
+
+    with mock.patch.dict(os.environ):
+        monkeypatch.setenv("PACE_FLOAT_PRECISION", "32")
+        yield # Restore the environment after 
 
 
 @pytest.fixture()
 def setenv_pace64(monkeypatch):
-    with mock.patch.dict(os.environ, clear=True):
-        envvars = {
-            "PACE_FLOAT_PRECISION": "64",
-        }
-        for k, v in envvars.items():
-            monkeypatch.setenv(k, v)
-        yield # This is the magical bit which restore the environment after
+    with mock.patch.dict(os.environ):
+        monkeypatch.setenv("PACE_FLOAT_PRECISION", "64")
+        yield # Restore the environment after
 
-
-def setup_dycore(rank=0) -> DycoreState:
-    """Sets up Dycore state for Rossby analytic initialization"""
-    backend = "numpy"
+def setup_dycore_config() -> DynamicalCoreConfig:
     config = DynamicalCoreConfig(
         layout=(1, 1),
         npx=13,
@@ -105,11 +101,23 @@ def setup_dycore(rank=0) -> DycoreState:
         z_tracer=True,
         do_qa=True,
     )
+    return config
+
+
+def setup_dycore(rank=0, usesCubedSphereComm=True) -> DycoreState:
+    """Sets up Dycore state for Rossby analytic initialization"""
+    backend = "numpy"
+    config = setup_dycore_config()
     mpi_comm = NullComm(
         rank=rank, total_ranks=6 * config.layout[0] * config.layout[1], fill_value=0.0
     )
     partitioner = CubedSpherePartitioner(TilePartitioner(config.layout))
-    communicator = CubedSphereCommunicator(mpi_comm, partitioner)
+
+    if usesCubedSphereComm:
+        communicator = CubedSphereCommunicator(mpi_comm, partitioner)
+    else:
+        communicator = TileCommunicator(mpi_comm, partitioner)
+
     dace_config = DaceConfig(communicator=communicator, backend=backend)
     stencil_config = StencilConfig(
         compilation_config=CompilationConfig(
@@ -169,7 +177,7 @@ def setup_dycore(rank=0) -> DycoreState:
 
 
 def plot_2d_diff(testname, rank, attribute, ds_values, state_values):
-    plt.title(f"Diff NetCDF vs Pace Dycore State '{attribute}'")
+    plt.title(f"Fortran - Pace / '{attribute}'")
     diff = ds_values - state_values
     plt.imshow(diff, cmap="viridis")
     plt.colorbar()
@@ -189,23 +197,19 @@ def plot_2d(desc, rank, attribute, data):
     plt.clf()
 
 
-def check_init(data_dir, attributes, max_eps_error):
+def check_init(data_dir, attributes, max_eps_error, step=False):
     """TODO: doc"""
     
-    #TODO: doublecheck fixture?
-    #Fixture example found here: https://stackoverflow.com/questions/77255758/how-can-i-mock-my-environment-variables-for-my-pytest
-
     precision = "64"
     if 'PACE_FLOAT_PRECISION' in os.environ:
         precision = os.getenv("PACE_FLOAT_PRECISION", "SHOULD_NOT_BE_USED")
-        print(f"************************Pace Float Precision = {precision}")
-    else:
-        print(f"************************PACE_FLOAT_PRECISION not defined")
 
     for rank in range(0, 1):
         fortran_rank = rank + 1
-        _, state, _ = setup_dycore(rank=rank)
-        core1_ds = xr.open_dataset(
+        dycore, state, timer = setup_dycore(rank=rank)
+        if step:
+            dycore.step_dynamics(state, timer)
+        core_ds = xr.open_dataset(
             os.path.join(data_dir, f"fv_core.res.tile{fortran_rank}.nc")
         )
         for attribute in attributes:
@@ -216,29 +220,38 @@ def check_init(data_dir, attributes, max_eps_error):
 
             # Dataset values for 3D/2D Attributes at time zero
             if state_ndims == 2:  # 2D
-                core1_ds_values = core1_ds[attribute].values[0, :].transpose(1, 0)
-                core1_ds_values_2d, state_values_2d = core1_ds_values, state_values
+                core_ds_values = core_ds[attribute].values[0, :].transpose(1, 0)
+                core_ds_values_2d, state_values_2d = core_ds_values, state_values
             elif state_ndims == 3:  # 3D
-                core1_ds_values = core1_ds[attribute].values[0, :].transpose(2, 1, 0)
-                core1_ds_values_2d, state_values_2d = (
-                    core1_ds_values[:, :, 0],
+                core_ds_values = core_ds[attribute].values[0, :].transpose(2, 1, 0)
+                core_ds_values_2d, state_values_2d = (
+                    core_ds_values[:, :, 0],
                     state_values[:, :, 0],
                 )
             else:
                 assert False, f"Unexpected number of dims in DycoreState {attribute}"
 
-            plot_2d(f"pace-init{precision}", rank, attribute, state_values_2d)
-            plot_2d(f"ds-init{precision}", rank, attribute, core1_ds_values_2d)
-            plot_2d_diff(f"init{precision}", rank, attribute, core1_ds_values_2d, state_values_2d)
+            # TODO: Remove plotting eventually
+            step_prefix = "step1_" if step else ""
+            plot_2d(f"{step_prefix}pace-init{precision}", rank, attribute, state_values_2d)
+            plot_2d(f"{step_prefix}ds-init{precision}", rank, attribute, core_ds_values_2d)
+            plot_2d_diff(f"{step_prefix}init{precision}", rank, attribute, core_ds_values_2d, state_values_2d)
 
             max_error_diff = np.max(
-                np.absolute((core1_ds_values - state_values) / core1_ds_values)
+                np.absolute((core_ds_values - state_values) / core_ds_values)
             )
+            if np.isnan(max_error_diff): # e.g., from zero division
+                max_error_diff = np.max(np.absolute((core_ds_values - state_values)))
+
             assert max_error_diff < max_eps_error
 
     # NOTE: The original test_cases.F90 initialized tracers for cl and cl2,
     #       but we do not initialize or check for them in this test.
 
+
+# TODO: Why doesn't this work instead of setenv_pace64?
+#@mock.patch.dict("os.environ", {"PACE_FLOAT_PRECISION", "64"})
+#def test_rossby_init64():
 
 def test_rossby_init64(setenv_pace64):
     """Tests Rossby-Haurwitz wave 4 initialization for 64bit precision
@@ -247,10 +260,8 @@ def test_rossby_init64(setenv_pace64):
 
     data_dir = os.path.join(ROSSBY_DIR, "zero_time_restart")
 
-    # attributes = ["u", "v", "delp", "phis"]
-    attributes = ["u"]
-    # max_eps_error = 2e-13
-    max_eps_error = 2e-12
+    attributes = ["u", "v", "delp", "phis"]
+    max_eps_error = 1e-13
     check_init(data_dir, attributes, max_eps_error)
 
 
@@ -263,12 +274,12 @@ def test_rossby_init32(setenv_pace32):
 
     # attributes = ["u", "v", "delp", "phis"]
     attributes = ["u"]
-    # max_eps_error = 2e-13
+    #max_eps_error = 2e-13
     max_eps_error = 2e-7
     check_init(data_dir, attributes, max_eps_error)
 
 
-def test_rossby_step1():
+def test_rossby_step1_64(setenv_pace64):
     """Tests Rossby-Haurwitz wave 4 initialization
     Compare DycoreState values with ground truth net-cdf files after 1 time step
     """
@@ -278,47 +289,40 @@ def test_rossby_step1():
     # attributes = ["u", "v", "delp", "phis"]
     attributes = ["u"]
     max_eps_error = 2e-13
-    for rank in range(0, 1):
-        fortran_rank = rank + 1
-        dycore, state, timer = setup_dycore(rank=rank)
-        dycore.step_dynamics(state, timer)
-        # TODO: how do I get the updated dycore state? Is it already updated?
+    move_step = True
+    check_init(data_dir, attributes, max_eps_error, move_step)
 
-        core1_ds = xr.open_dataset(
-            os.path.join(data_dir, f"fv_core.res.tile{fortran_rank}.nc")
+
+def test_comm_type_error():
+    """TODO"""
+    backend = "numpy"
+    config = setup_dycore_config()
+    mpi_comm = NullComm(
+        rank=0, total_ranks=6 * config.layout[0] * config.layout[1], fill_value=0.0
+    )
+    partitioner = CubedSpherePartitioner(TilePartitioner(config.layout))
+    communicator = TileCommunicator(mpi_comm, partitioner) # Should cause TypeError
+    sizer = SubtileGridSizer.from_tile_params(
+        nx_tile=config.npx - 1,
+        ny_tile=config.npy - 1,
+        nz=config.npz,
+        n_halo=3,
+        extra_dim_lengths={},
+        layout=config.layout,
+        tile_partitioner=partitioner.tile,
+        tile_rank=communicator.tile.rank,
+    )
+    quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
+
+    with pytest.raises(TypeError) as te:
+        # create an initial state for the Rossby Wave number 4 test case
+        state = ai.init_analytic_state(
+            analytic_init_case="rossby",
+            grid_data=None,
+            quantity_factory=None,
+            adiabatic=config.adiabatic,
+            hydrostatic=config.hydrostatic,
+            moist_phys=config.moist_phys,
+            comm=communicator,
         )
-        for attribute in attributes:
-            print(f"rank {rank}, attribute {attribute}")
-            # Dycore values/dimensions
-            state_values = getattr(state, attribute).view[:]
-            state_ndims = len(getattr(state, attribute).dims)
-
-            # Dataset values for 3D/2D Attributes at time zero
-            if state_ndims == 2:  # 2D
-                core1_ds_values = core1_ds[attribute].values[0, :].transpose(1, 0)
-                core1_ds_values_2d, state_values_2d = core1_ds_values, state_values
-            elif state_ndims == 3:  # 3D
-                core1_ds_values = core1_ds[attribute].values[0, :].transpose(2, 1, 0)
-                core1_ds_values_2d, state_values_2d = (
-                    core1_ds_values[:, :, 0],
-                    state_values[:, :, 0],
-                )
-            else:
-                assert False, f"Unexpected number of dims in DycoreState {attribute}"
-
-            plot_2d("pace-s1", rank, attribute, state_values_2d)
-            plot_2d("ds-s1", rank, attribute, core1_ds_values_2d)
-            plot_2d_diff("state1", rank, attribute, core1_ds_values_2d, state_values_2d)
-
-            max_error_diff = np.max(
-                np.absolute((core1_ds_values - state_values) / core1_ds_values)
-            )
-            # assert max_error_diff < max_eps_error # TODO put this back
-
-    # NOTE: The original test_cases.F90 initialized tracers for cl and cl2,
-    #       but we do not initialize or check for them in this test.
-
-def test_float_val():
-    # Throw-away test... just for debugging purposes
-    pace_float_precision = os.getenv("PACE_FLOAT_PRECISION", "NOT DEFINED!!!!!!!!!!!!!!!!!")
-    print(f"************************Pace Float Precision = {pace_float_precision}")
+        assert str(te.value) == "Expected CubedSphereCommunicator instance for 'comm', got TileCommunicator instead."
