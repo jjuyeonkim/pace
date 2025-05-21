@@ -100,6 +100,7 @@ def setup_dycore_config() -> DynamicalCoreConfig:
         vtdm4=0.06,
         z_tracer=True,
         do_qa=True,
+        sw_dynamics=True,
     )
     return config
 
