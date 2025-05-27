@@ -114,9 +114,7 @@ def setup_dycore() -> Tuple[DynamicalCore, DycoreState, Timer]:
         analytic_init_case="baroclinic",
         grid_data=grid_data,
         quantity_factory=quantity_factory,
-        adiabatic=config.adiabatic,
-        hydrostatic=config.hydrostatic,
-        moist_phys=config.moist_phys,
+        config=config,
         comm=communicator,
     )
     stencil_factory = StencilFactory(

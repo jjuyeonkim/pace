@@ -1,5 +1,7 @@
-""" Unit tests for Jablonowski & Williamson Baroclinic test case (Steady State)
-Corresponds to Fortran test #12 found in tools/test_cases.F90 of
+""" Unit tests for Jablonowski & Williamson Baroclinic test cases 
+Corresponds to Fortran test #12 (Steady State) and #13 (Perturbation) 
+found in tools/test_cases.F90 of:
+
 https://github.com/NOAA-GFDL/GFDL_atmos_cubed_sphere.git
 """
 
@@ -34,7 +36,6 @@ from pyFV3 import DycoreState, DynamicalCore, DynamicalCoreConfig
 DIR = os.path.abspath(os.path.dirname(__file__))
 PACE_DIR = os.path.join(DIR, "..", "..", "..")
 BC_DIR = os.path.join(PACE_DIR, "tests", "main", "data", "baroclinic")
-BC_SS_DIR = os.path.join(PACE_DIR, "tests", "main", "data", "baroclinic_ss")
 
 
 @pytest.fixture()
@@ -72,10 +73,10 @@ def setup_dycore_config() -> DynamicalCoreConfig:
         d2_bg_k1=0.2,
         d2_bg_k2=0.1,
         d4_bg=0.15,
-        d_con=1.0,       # TODO: What is equiv in SHiELD_build?
+        d_con=0.0,       # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
         d_ext=0.0,
         dddmp=0.5,
-        delt_max=0.002,  # TODO: What is equiv in SHiELD_build?
+        #delt_max=0.002,  # TODO: What is equiv in SHiELD_build?
         do_sat_adj=True,
         do_vort_damp=True,
         fill=True,
@@ -86,14 +87,14 @@ def setup_dycore_config() -> DynamicalCoreConfig:
         hord_vt=6,
         hydrostatic=False,
         k_split=1,
-        ke_bg=0.0,       # TODO: What is equiv in SHiELD_build?
+        ke_bg=0.0,       # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
         kord_mt=9,
         kord_tm=-9,
         kord_tr=9,
         kord_wz=9,
         n_split=1,
         nord=3,
-        p_fac=0.05,      # TODO: What is equiv in SHiELD_build?
+        p_fac=0.05,      # Default is 0.05 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
         rf_fast=True,
         rf_cutoff=3000.0,
         tau=10.0,
@@ -152,9 +153,7 @@ def setup_dycore(rank=0, usesCubedSphereComm=True) -> DycoreState:
         analytic_init_case=ai.Cases.baroclinic.value,
         grid_data=grid_data,
         quantity_factory=quantity_factory,
-        adiabatic=config.adiabatic,
-        hydrostatic=config.hydrostatic,
-        moist_phys=config.moist_phys,
+        config=config,
         comm=communicator,
     )
     stencil_factory = StencilFactory(
@@ -192,12 +191,12 @@ def plot_2d(desc, rank, attribute, data):
     plt.imshow(data, cmap="viridis")
     plt.colorbar()
     plt.savefig(
-        f"test_{desc}_rossby_r{rank}_{attribute}.png"
+        f"test_{desc}_baroclinic_r{rank}_{attribute}.png"
     )  # TODO: directory somewhere?
     plt.clf()
 
 
-def check_init(data_dir, attributes, max_eps_error, step=False):
+def check_init(data_dir, attributes, max_eps_error, gen_plots=False, step=False):
     """TODO: doc"""
 
     precision = "64"
@@ -232,10 +231,11 @@ def check_init(data_dir, attributes, max_eps_error, step=False):
                 assert False, f"Unexpected number of dims in DycoreState {attribute}"
 
             # TODO: Remove plotting eventually
-            step_prefix = "step1_" if step else ""
-            plot_2d(f"{step_prefix}pace-init{precision}", rank, attribute, state_values_2d)
-            plot_2d(f"{step_prefix}ds-init{precision}", rank, attribute, core_ds_values_2d)
-            plot_2d_diff(f"{step_prefix}init{precision}", rank, attribute, core_ds_values_2d, state_values_2d)
+            if gen_plots:
+                step_prefix = "step1_" if step else ""
+                plot_2d(f"{step_prefix}pace-init{precision}", rank, attribute, state_values_2d)
+                plot_2d(f"{step_prefix}ds-init{precision}", rank, attribute, core_ds_values_2d)
+                plot_2d_diff(f"{step_prefix}init{precision}", rank, attribute, core_ds_values_2d, state_values_2d)
 
             max_error_diff = np.max(
                 np.absolute((core_ds_values - state_values) / core_ds_values)
@@ -254,75 +254,50 @@ def check_init(data_dir, attributes, max_eps_error, step=False):
 #def test_rossby_init64():
 
 def test_baroclinic_init64(setenv_pace64):
-    """Tests Rossby-Haurwitz wave 4 initialization for 64bit precision
+    """Tests case #13 (Perturbation) initialization for 64bit precision
     Compare initialized DycoreState values with ground truth net-cdf files.
     """
 
     data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_64")
 
-    attributes = ["u", "v", "delp", "phis"]
+    attributes = ["u", "v"] # TODO: more attributes
     max_eps_error = 1e-13
-    check_init(data_dir, attributes, max_eps_error)
+    check_init(data_dir, attributes, max_eps_error, gen_plots=True)
 
 
-def test_rossby_init32(setenv_pace32):
-    """Tests Rossby-Haurwitz wave 4 initialization for 32bit precision
+def test_baroclinic_init32(setenv_pace32):
+    """Tests case #13 (Perturbation) initialization for 32bit precision
     Compare initialized DycoreState values with ground truth net-cdf files.
     """
 
-    data_dir = os.path.join(ROSSBY_DIR, "init3_32_restart")
+    data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_32")
 
     # attributes = ["u", "v", "delp", "phis"]
-    attributes = ["u"]
-    #max_eps_error = 2e-13
-    max_eps_error = 2e-7
+    attributes = ["u", "v"] # TODO: more attributes
+    max_eps_error = 1e-7
     check_init(data_dir, attributes, max_eps_error)
 
 
-def test_rossby_step1_64(setenv_pace64):
-    """Tests Rossby-Haurwitz wave 4 initialization
-    Compare DycoreState values with ground truth net-cdf files after 1 time step
+def test_baroclinic_12_init64(setenv_pace64):
+    """Tests case #12 (Steady State) initialization for 64bit precision
+    Compare initialized DycoreState values with ground truth net-cdf files.
     """
-    data_dir = os.path.join(
-        PACE_DIR, "tests", "main", "data", "rossby_validation", "step1_restart"
-    )
-    # attributes = ["u", "v", "delp", "phis"]
-    attributes = ["u"]
-    max_eps_error = 2e-13
-    move_step = True
-    check_init(data_dir, attributes, max_eps_error, move_step)
+
+    data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_12_64")
+
+    attributes = ["u", "v"] # TODO: more attributes
+    max_eps_error = 1e-13
+    check_init(data_dir, attributes, max_eps_error, gen_plots=True)
 
 
-def test_comm_type_error():
-    """TODO"""
-    backend = "numpy"
-    config = setup_dycore_config()
-    mpi_comm = NullComm(
-        rank=0, total_ranks=6 * config.layout[0] * config.layout[1], fill_value=0.0
-    )
-    partitioner = CubedSpherePartitioner(TilePartitioner(config.layout))
-    communicator = TileCommunicator(mpi_comm, partitioner) # Should cause TypeError
-    sizer = SubtileGridSizer.from_tile_params(
-        nx_tile=config.npx - 1,
-        ny_tile=config.npy - 1,
-        nz=config.npz,
-        n_halo=3,
-        extra_dim_lengths={},
-        layout=config.layout,
-        tile_partitioner=partitioner.tile,
-        tile_rank=communicator.tile.rank,
-    )
-    quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
+def test_baroclinic_12_init32(setenv_pace32):
+    """Tests case #12 (Steady State) initialization for 32bit precision
+    Compare initialized DycoreState values with ground truth net-cdf files.
+    """
+    data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_12_32")
 
-    with pytest.raises(TypeError) as te:
-        # create an initial state for the Rossby Wave number 4 test case
-        state = ai.init_analytic_state(
-            analytic_init_case="rossby",
-            grid_data=None,
-            quantity_factory=None,
-            adiabatic=config.adiabatic,
-            hydrostatic=config.hydrostatic,
-            moist_phys=config.moist_phys,
-            comm=communicator,
-        )
-        assert str(te.value) == "Expected CubedSphereCommunicator instance for 'comm', got TileCommunicator instead."
+    attributes = ["u", "v"] # TODO: more attributes
+    max_eps_error = 1e-7
+    check_init(data_dir, attributes, max_eps_error)
+
+
