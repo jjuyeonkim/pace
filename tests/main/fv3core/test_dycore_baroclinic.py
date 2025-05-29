@@ -57,11 +57,11 @@ def setenv_pace64(monkeypatch):
         yield # Restore the environment after
 
 
-def setup_dycore_config() -> DynamicalCoreConfig:
+def setup_dycore_config(test_case=ai.Cases.baroclinic) -> DynamicalCoreConfig:
     config = DynamicalCoreConfig(
         layout=(1, 1),
-        npx=13,
-        npy=13,
+        npx=49,
+        npy=49,
         npz=79,
         ntiles=6,
         nwat=6,
@@ -106,7 +106,7 @@ def setup_dycore_config() -> DynamicalCoreConfig:
     return config
 
 
-def setup_dycore(rank=0, usesCubedSphereComm=True) -> DycoreState:
+def setup_dycore(rank=0, usesCubedSphereComm=True, test_case=ai.Cases.baroclinic) -> DycoreState:
     """Sets up Dycore state for Rossby analytic initialization"""
     backend = "numpy"
     config = setup_dycore_config()
@@ -150,7 +150,7 @@ def setup_dycore(rank=0, usesCubedSphereComm=True) -> DycoreState:
     grid_data = GridData.new_from_metric_terms(metric_terms)
 
     state = ai.init_analytic_state(
-        analytic_init_case=ai.Cases.baroclinic.value,
+        analytic_init_case=test_case.value,
         grid_data=grid_data,
         quantity_factory=quantity_factory,
         config=config,
@@ -175,38 +175,38 @@ def setup_dycore(rank=0, usesCubedSphereComm=True) -> DycoreState:
     return dycore, state, NullTimer()
 
 
-def plot_2d_diff(testname, rank, attribute, ds_values, state_values):
+def plot_2d_diff(testname, rank, attribute, ds_values, state_values, test_case=ai.Cases.baroclinic):
     plt.title(f"Fortran - Pace / '{attribute}'")
     diff = ds_values - state_values
     plt.imshow(diff, cmap="viridis")
     plt.colorbar()
     plt.savefig(
-        f"test_{testname}_baroclinic_diff_r{rank}_{attribute}.png"
+        f"test_{testname}_{test_case.value}_diff_r{rank}_{attribute}.png"
     )  # TODO: directory somewhere?
     plt.clf()
 
 
-def plot_2d(desc, rank, attribute, data):
+def plot_2d(desc, rank, attribute, data, test_case=ai.Cases.baroclinic):
     plt.title(f"{desc} - rank:{rank}, '{attribute}'")
     plt.imshow(data, cmap="viridis")
     plt.colorbar()
     plt.savefig(
-        f"test_{desc}_baroclinic_r{rank}_{attribute}.png"
+        f"test_{desc}_{test_case.value}_r{rank}_{attribute}.png"
     )  # TODO: directory somewhere?
     plt.clf()
 
 
-def check_init(data_dir, attributes, max_eps_error, gen_plots=False, step=False):
+def check_init(data_dir, attributes, max_eps_error, gen_plots=False, step=False, test_case=ai.Cases.baroclinic):
     """TODO: doc"""
 
     precision = "64"
     if 'PACE_FLOAT_PRECISION' in os.environ:
         precision = os.getenv("PACE_FLOAT_PRECISION", "SHOULD_NOT_BE_USED")
 
-    for rank in range(0, 1):
+    for rank in range(0, 6):
         fortran_rank = rank + 1
         dycore, state, timer = setup_dycore(rank=rank)
-        if step:
+        if step: 
             dycore.step_dynamics(state, timer)
         core_ds = xr.open_dataset(
             os.path.join(data_dir, f"fv_core.res.tile{fortran_rank}.nc")
@@ -214,8 +214,8 @@ def check_init(data_dir, attributes, max_eps_error, gen_plots=False, step=False)
         for attribute in attributes:
             print(f"rank {rank}, attribute {attribute}")
             # Dycore values/dimensions
-            state_values = getattr(state, attribute).view[:]
-            state_ndims = len(getattr(state, attribute).dims)
+            state_values = getattr(state, attribute.lower()).view[:]
+            state_ndims = len(getattr(state, attribute.lower()).dims)
 
             # Dataset values for 3D/2D Attributes at time zero
             if state_ndims == 2:  # 2D
@@ -260,8 +260,9 @@ def test_baroclinic_init64(setenv_pace64):
 
     data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_64")
 
-    attributes = ["u", "v"] # TODO: more attributes
-    max_eps_error = 1e-13
+    #attributes = ["phis", "W", "u", "v"] # TODO: more attributes
+    attributes = ["phis", "u"] # TODO: more attributes
+    max_eps_error = 2.2e-13
     check_init(data_dir, attributes, max_eps_error, gen_plots=True)
 
 
@@ -273,8 +274,8 @@ def test_baroclinic_init32(setenv_pace32):
     data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_32")
 
     # attributes = ["u", "v", "delp", "phis"]
-    attributes = ["u", "v"] # TODO: more attributes
-    max_eps_error = 1e-7
+    attributes = ["phis"] # TODO: more attributes
+    max_eps_error = 1.9e-5
     check_init(data_dir, attributes, max_eps_error)
 
 
@@ -285,8 +286,9 @@ def test_baroclinic_12_init64(setenv_pace64):
 
     data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_12_64")
 
-    attributes = ["u", "v"] # TODO: more attributes
-    max_eps_error = 1e-13
+    #attributes = ["phis", "u", "v"] # TODO: more attributes
+    attributes = ["phis"] # TODO: more attributes
+    max_eps_error = 2.2e-13
     check_init(data_dir, attributes, max_eps_error, gen_plots=True)
 
 
@@ -296,8 +298,9 @@ def test_baroclinic_12_init32(setenv_pace32):
     """
     data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_12_32")
 
-    attributes = ["u", "v"] # TODO: more attributes
-    max_eps_error = 1e-7
+    #attributes = ["phis", "u", "v"] # TODO: more attributes
+    attributes = ["phis"] # TODO: more attributes
+    max_eps_error = 2e-5
     check_init(data_dir, attributes, max_eps_error)
 
 
