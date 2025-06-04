@@ -322,6 +322,9 @@ class DriverConfig:
             config_dict["dycore_config"].pop(field, None)
             config_dict["physics_config"].pop(field, None)
         config_dict["initialization"]["type"] = "restart"
+        # Remove existing initialization config and repopulate
+        config_dict["initialization"].pop("config")
+        config_dict["initialization"]["config"] = {}
         config_dict["initialization"]["config"]["start_time"] = time
         config_dict["initialization"]["config"]["path"] = restart_path
         # convert physics package enum to str

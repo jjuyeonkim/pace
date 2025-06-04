@@ -22,7 +22,7 @@ from ndsl.stencils.testing import TranslateGrid, grid
 from ndsl.typing import Communicator
 from pace.registry import Registry
 from pace.state import DriverState, TendencyState, _restart_driver_state
-from pyFV3 import DycoreState
+from pyFV3 import DycoreState, DynamicalCoreConfig
 from pyFV3.testing import TranslateFVDynamics
 from pySHiELD import PHYSICS_PACKAGES, PhysicsState
 
@@ -105,6 +105,7 @@ class AnalyticInit(Initializer):
 
     case: str = "baroclinic"
     start_time: datetime = datetime(2000, 1, 1)
+    dycore_config: DynamicalCoreConfig = dataclasses.field(default_factory=DynamicalCoreConfig)
 
     def get_driver_state(
         self,
@@ -119,9 +120,7 @@ class AnalyticInit(Initializer):
             analytic_init_case=self.case,
             grid_data=grid_data,
             quantity_factory=quantity_factory,
-            adiabatic=False,
-            hydrostatic=False,
-            moist_phys=True,
+            config=self.dycore_config,
             comm=communicator,
         )
         physics_state = PhysicsState.init_zeros(

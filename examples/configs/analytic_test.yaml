@@ -5,10 +5,6 @@ stencil_config:
     validate_args: true
     format_source: false
     device_sync: false
-initialization:
-  type: analytic
-  config:
-    case: baroclinic
 performance_config:
   collect_performance: true
   experiment_name: c12_baroclinic
@@ -44,7 +40,7 @@ diagnostics_config:
     - level: 65
       names:
         - pt
-dycore_config:
+dycore_config: &dycore_config
   a_imp: 1.0
   beta: 0.
   consv_te: 0.
@@ -99,3 +95,9 @@ physics_config:
   hydrostatic: false
   nwat: 6
   do_qa: true
+
+initialization:
+  type: analytic
+  config:
+    case: baroclinic
+    dycore_config: *dycore_config

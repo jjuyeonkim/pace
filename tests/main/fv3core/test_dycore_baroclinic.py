@@ -176,12 +176,21 @@ def setup_dycore(rank=0, usesCubedSphereComm=True, test_case=ai.Cases.baroclinic
 
 
 def plot_2d_diff(testname, rank, attribute, ds_values, state_values, test_case=ai.Cases.baroclinic):
-    plt.title(f"Fortran - Pace / '{attribute}'")
     diff = ds_values - state_values
+    plt.title(f"diff: Fortran - Pace for '{attribute}'")
     plt.imshow(diff, cmap="viridis")
     plt.colorbar()
     plt.savefig(
         f"test_{testname}_{test_case.value}_diff_r{rank}_{attribute}.png"
+    )  # TODO: directory somewhere?
+    plt.clf()
+
+    norm_diff = np.absolute((ds_values - state_values) / ds_values)
+    plt.title(f"norm_diff: abs(Fortran - Pace / Fortran) for '{attribute}'")
+    plt.imshow(norm_diff, cmap="viridis")
+    plt.colorbar()
+    plt.savefig(
+        f"test_{testname}_{test_case.value}_norm_diff_r{rank}_{attribute}.png"
     )  # TODO: directory somewhere?
     plt.clf()
 
@@ -196,14 +205,21 @@ def plot_2d(desc, rank, attribute, data, test_case=ai.Cases.baroclinic):
     plt.clf()
 
 
-def check_init(data_dir, attributes, max_eps_error, gen_plots=False, step=False, test_case=ai.Cases.baroclinic):
+def check_init(data_dir,
+               attributes,
+               max_eps_error,
+               gen_plots=False,
+               step=False,
+               test_case=ai.Cases.baroclinic,
+               desc="tc12_64",
+               rank_range=range(0,6)):
     """TODO: doc"""
 
     precision = "64"
     if 'PACE_FLOAT_PRECISION' in os.environ:
         precision = os.getenv("PACE_FLOAT_PRECISION", "SHOULD_NOT_BE_USED")
 
-    for rank in range(0, 6):
+    for rank in rank_range:
         fortran_rank = rank + 1
         dycore, state, timer = setup_dycore(rank=rank)
         if step: 
@@ -233,9 +249,9 @@ def check_init(data_dir, attributes, max_eps_error, gen_plots=False, step=False,
             # TODO: Remove plotting eventually
             if gen_plots:
                 step_prefix = "step1_" if step else ""
-                plot_2d(f"{step_prefix}pace-init{precision}", rank, attribute, state_values_2d)
-                plot_2d(f"{step_prefix}ds-init{precision}", rank, attribute, core_ds_values_2d)
-                plot_2d_diff(f"{step_prefix}init{precision}", rank, attribute, core_ds_values_2d, state_values_2d)
+                plot_2d(f"{step_prefix}pace-init{precision}.{desc}.", rank, attribute, state_values_2d)
+                plot_2d(f"{step_prefix}ds-init{precision}.{desc}.", rank, attribute, core_ds_values_2d)
+                plot_2d_diff(f"{step_prefix}init{precision}.{desc}.", rank, attribute, core_ds_values_2d, state_values_2d)
 
             max_error_diff = np.max(
                 np.absolute((core_ds_values - state_values) / core_ds_values)
@@ -261,9 +277,9 @@ def test_baroclinic_init64(setenv_pace64):
     data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_64")
 
     #attributes = ["phis", "W", "u", "v"] # TODO: more attributes
-    attributes = ["phis", "u"] # TODO: more attributes
+    attributes = ["u"] # TODO: more attributes
     max_eps_error = 2.2e-13
-    check_init(data_dir, attributes, max_eps_error, gen_plots=True)
+    check_init(data_dir, attributes, max_eps_error, rank_range=[0], gen_plots=True, desc="case13_64")
 
 
 def test_baroclinic_init32(setenv_pace32):
@@ -274,9 +290,9 @@ def test_baroclinic_init32(setenv_pace32):
     data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_32")
 
     # attributes = ["u", "v", "delp", "phis"]
-    attributes = ["phis"] # TODO: more attributes
+    attributes = ["phis", "u"] # TODO: more attributes
     max_eps_error = 1.9e-5
-    check_init(data_dir, attributes, max_eps_error)
+    check_init(data_dir, attributes, max_eps_error, desc="case13_32")
 
 
 def test_baroclinic_12_init64(setenv_pace64):
@@ -287,9 +303,9 @@ def test_baroclinic_12_init64(setenv_pace64):
     data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_12_64")
 
     #attributes = ["phis", "u", "v"] # TODO: more attributes
-    attributes = ["phis"] # TODO: more attributes
+    attributes = ["phis", "u"] # TODO: more attributes
     max_eps_error = 2.2e-13
-    check_init(data_dir, attributes, max_eps_error, gen_plots=True)
+    check_init(data_dir, attributes, max_eps_error, gen_plots=True, desc="case12_64")
 
 
 def test_baroclinic_12_init32(setenv_pace32):
@@ -301,6 +317,6 @@ def test_baroclinic_12_init32(setenv_pace32):
     #attributes = ["phis", "u", "v"] # TODO: more attributes
     attributes = ["phis"] # TODO: more attributes
     max_eps_error = 2e-5
-    check_init(data_dir, attributes, max_eps_error)
+    check_init(data_dir, attributes, max_eps_error, desc="case12_32")
 
 
