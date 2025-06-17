@@ -14,6 +14,10 @@ from ndsl.typing import Communicator
 from pyFV3 import DycoreState
 from pySHiELD import PHYSICS_PACKAGES, PhysicsState
 
+# jk TODO REMOVE
+import matplotlib.pyplot as plt
+import os
+import numpy as np
 
 @dataclasses.dataclass()
 class TendencyState:
@@ -57,6 +61,48 @@ class TendencyState:
                 dtype=Float,
             )
         return cls(**initial_quantities)
+
+
+# jk TODO REMOVE plot functions
+def plot_2d_diff(testname, rank, attribute, ds_values, state_values, plot_dir="."):
+    os.makedirs(plot_dir, exist_ok=True)
+    diff = ds_values - state_values
+    plt.title(f"diff: Fortran - Pace for '{attribute}'")
+    plt.imshow(diff, cmap="viridis")
+    plt.colorbar()
+    plt.savefig(
+        os.path.join(
+            plot_dir,
+            f"test_{testname}_diff_r{rank}_{attribute}.png"
+        )
+    )
+    plt.clf()
+
+    norm_diff = np.absolute((ds_values - state_values) / ds_values)
+    plt.title(f"norm_diff: abs(Fortran - Pace / Fortran) for '{attribute}'")
+    plt.imshow(norm_diff, cmap="viridis")
+    plt.colorbar()
+    plt.savefig(
+        os.path.join(
+            plot_dir,
+            f"test_{testname}_norm_diff_r{rank}_{attribute}.png"
+        )
+    )
+    plt.clf()
+
+
+def plot_2d(desc, rank, attribute, data, plot_dir="."):
+    os.makedirs(plot_dir, exist_ok=True)
+    plt.title(f"{desc} - rank:{rank}, '{attribute}'")
+    plt.imshow(data, cmap="viridis")
+    plt.colorbar()
+    plt.savefig(
+        os.path.join(
+            plot_dir,
+            f"test_{desc}_r{rank}_{attribute}.png"
+        )
+    )
+    plt.clf()
 
 
 @dataclasses.dataclass
@@ -109,6 +155,7 @@ class DriverState:
         )
         return state
 
+
     def save_state(self, comm, restart_path: str = "RESTART"):
         from pathlib import Path
 
@@ -148,6 +195,36 @@ class DriverState:
             dim="Time", axis=0
         ).to_netcdf(os.path.join(path, f"fv_tracer.res.tile{rank + 1}.nc"))
         """
+        # jk TODO REMOVE plotting eventually (for testing only)
+        rank = comm.Get_rank()
+        state = self.dycore_state
+        fortran_rank = rank + 1
+        data_dir = '/home/Janice.Kim/pace/tests/main/data/baroclinic/pace_test13_64_debug_rs/'
+        core_ds = xr.open_dataset(data_dir + f"fv_core.res.tile{fortran_rank}.nc")
+        for attribute in ["u", "v", "delp", "phis"]:
+            print(f"rank {rank}, attribute {attribute}")
+            # Dycore values/dimensions
+            state_values = getattr(state, attribute.lower()).view[:]
+            state_ndims = len(getattr(state, attribute.lower()).dims)
+
+            # Dataset values for 3D/2D Attributes at time zero
+            if state_ndims == 2:  # 2D
+                core_ds_values = core_ds[attribute].values[0, :].transpose(1, 0)
+                core_ds_values_2d, state_values_2d = core_ds_values, state_values
+            elif state_ndims == 3:  # 3D
+                core_ds_values = core_ds[attribute].values[0, :].transpose(2, 1, 0)
+                core_ds_values_2d, state_values_2d = (
+                    core_ds_values[:, :, 0],
+                    state_values[:, :, 0],
+                )
+            else:
+                assert False, f"Unexpected number of dims in DycoreState {attribute}"
+
+            gen_plots = True
+            if gen_plots:
+                plot_2d(f"pace", rank, attribute, state_values_2d, plot_dir=restart_path)
+                plot_2d(f"ds", rank, attribute, core_ds_values_2d, plot_dir=restart_path)
+                plot_2d_diff(f"", rank, attribute, core_ds_values_2d, state_values_2d, plot_dir=restart_path)
 
 
 def _overwrite_state_from_restart(
