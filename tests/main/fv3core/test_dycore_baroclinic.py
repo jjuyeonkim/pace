@@ -31,7 +31,7 @@ from ndsl import (
     TileCommunicator,
 )
 from ndsl.grid import DampingCoefficients, GridData, MetricTerms
-from ndsl.performance.timer import NullTimer, Timer
+from ndsl.performance.timer import NullTimer
 from ndsl.constants import X_DIM, X_INTERFACE_DIM, Y_DIM, Y_INTERFACE_DIM
 from ndsl.grid import (
     AngleGridData,
@@ -127,11 +127,8 @@ def setup_external_grid_data_b(
         eta_file: str
 ) -> Tuple[DampingCoefficients, GridData]:
     """TODO: flesh this out"""
-    #grid_file_path = "/home/Janice.Kim/FRE-NCtools/jk_pace_c48/from_rusty/C48_GRID/C48_grid.tile"
     grid_file_path = os.path.join(BC_DIR, "grid_C48", "C48.BC.tile" )
     grid_type=0
-
-    # ToDo: refactor when grid_type is an enum
     tile_num = (
         get_tile_index(communicator.rank, communicator.partitioner.total_ranks)
         + 1
@@ -196,7 +193,7 @@ def setup_external_grid_data_a(
 
 
 def setup_dycore(rank=0, usesCubedSphereComm=True, test_case=ai.Cases.baroclinic.value) -> DycoreState:
-    """Sets up Dycore state for Rossby analytic initialization"""
+    """Sets up Dycore state for analytic initialization"""
     backend = "numpy"
     config = setup_dycore_config(test_case=test_case)
     mpi_comm = NullComm(
@@ -230,7 +227,7 @@ def setup_dycore(rank=0, usesCubedSphereComm=True, test_case=ai.Cases.baroclinic
         sizer=sizer, comm=communicator
     )
     quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
-    eta_file = "tests/main/input/eta32.nc"
+    eta_file = "tests/main/input/eta32.nc" # TODO: where to document file creation for developers?
     metric_terms = MetricTerms(
         quantity_factory=quantity_factory,
         communicator=communicator,
@@ -290,10 +287,12 @@ def plot_2d_diff(testname, rank, attribute, ds_values, state_values, plot_dir=".
     )
     plt.clf()
 
-    #not_zero_mask = diff[diff != 0] # TODO: jk zero comparison okay?
-    #norm_diff = diff.copy()
-    #norm_diff[not_zero_mask] = np.absolute((ds_values - state_values) / ds_values)
-    norm_diff = np.absolute((ds_values - state_values) / ds_values)
+    # Normalize the differences. Take the regular diff when ds_value is 0
+    norm_diff = np.where(
+        ds_values != 0, 
+        np.absolute((ds_values - state_values) / ds_values), 
+        np.absolute(ds_values - state_values)
+    )
     plt.title(f"norm_diff: abs(Fortran - Pace / Fortran) for '{attribute}'")
     plt.imshow(norm_diff, cmap="viridis")
     plt.colorbar()
@@ -322,29 +321,30 @@ def plot_2d(desc, rank, attribute, data, plot_dir="."):
 
 def check_init(data_dir,
                attributes,
-               max_eps_error,
+               max_eps_errors,
                gen_plots=False,
                plot_dir=".",
                step=False,
                test_case=ai.Cases.baroclinic,
-               desc="tc13_64",
+               desc="test13_64",
                rank_range=range(0,6)):
     """TODO: doc"""
-    pass
-
     precision = "64"
     if 'PACE_FLOAT_PRECISION' in os.environ:
         precision = os.getenv("PACE_FLOAT_PRECISION", "SHOULD_NOT_BE_USED")
-
+    print(f"precision: {precision}")
+    # jk TODO: log precision instead?
+    
     for rank in rank_range:
-        fortran_rank = rank + 1
         dycore, state, timer = setup_dycore(rank=rank, test_case=test_case)
+
+        fortran_rank = rank + 1
         if step: 
             dycore.step_dynamics(state, timer)
         core_ds = xr.open_dataset(
             os.path.join(data_dir, f"fv_core.res.tile{fortran_rank}.nc")
         )
-        for attribute in attributes:
+        for attribute, max_eps_error in zip(attributes, max_eps_errors):
             print(f"rank {rank}, attribute {attribute}")
             # Dycore values/dimensions
             state_values = getattr(state, attribute.lower()).view[:]
@@ -365,18 +365,19 @@ def check_init(data_dir,
 
             # TODO: Remove plotting eventually
             if gen_plots:
-                step_prefix = "step1_" if step else ""
+                step_prefix = "step1_" if step else "t0_"
                 plot_2d(f"{step_prefix}pace.{desc}", rank, attribute, state_values_2d, plot_dir=plot_dir)
                 plot_2d(f"{step_prefix}ds.{desc}", rank, attribute, core_ds_values_2d, plot_dir=plot_dir)
                 plot_2d_diff(f"{step_prefix}{desc}", rank, attribute, core_ds_values_2d, state_values_2d, plot_dir=plot_dir)
 
-            max_error_diff = np.max(
-                np.absolute((core_ds_values - state_values) / np.average(core_ds_values)) # TODO: jk take out np.average?
+            norm_diff = np.where(
+                core_ds_values != 0, 
+                np.absolute((core_ds_values - state_values) / core_ds_values), 
+                np.absolute(core_ds_values - state_values)
             )
-            if np.isnan(max_error_diff): # e.g., from zero division
-                max_error_diff = np.max(np.absolute((core_ds_values - state_values)))
-
-            #assert max_error_diff < max_eps_error
+            max_error_norm_diff = np.max(norm_diff) # TODO: Use this when values don't blow up...?
+            max_error_diff = np.max(np.abs(core_ds_values - state_values))
+            assert max_error_diff < max_eps_error
 
     # NOTE: The original test_cases.F90 initialized tracers for cl and cl2,
     #       but we do not initialize or check for them in this test.
@@ -386,49 +387,41 @@ def check_init(data_dir,
 # TODO: Why doesn't this work instead of setenv_pace64?
 #@mock.patch.dict("os.environ", {"PACE_FLOAT_PRECISION", "64"})
 #def test_rossby_init64():
-
 def test_baroclinic_init64(setenv_pace64: None):
     """Tests case #13 (Perturbation) initialization for 64bit precision
     Compare initialized DycoreState values with ground truth net-cdf files.
+
+    Ground truth RESTART files were generated using the following script: 
+    TODO (where to put the script?)
+    Using SHiELD_build 8309e1151812f72dda41142a16da0eb1f2bc4f8a (5/22/2025)
     """
-
-    #data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_64")
-    #data_dir = "/home/Janice.Kim/SHiELD_dev/SCRATCH/soloCI_amdbox_FV3-202411-public/CI/BATCH-CI/C96.solo.BCmoist.pace_64_debug/RESTART"
-    desc = "pace_test13_64_debug_rs"
+    desc = "test13_64_debug_rs"
     data_dir = os.path.join(BC_DIR, desc)
-
     attributes = ["phis", "delp", "u", "v"] # TODO: more attributes
-    max_eps_error = 2.2e-13
-    rank_range = range(0, 6)
-    #rank_range = [0]
-    check_init(data_dir, attributes, max_eps_error, rank_range=rank_range, test_case=ai.Cases.baroclinic.value, gen_plots=True, desc=desc, plot_dir=desc)
+    max_eps_errors = [5e-12, 1e-14, 2e-12, 2e-12]
+    check_init(data_dir, attributes, max_eps_errors, test_case=ai.Cases.baroclinic.value, gen_plots=True, desc=desc, plot_dir=desc)
 
 
 def test_baroclinic_init32(setenv_pace32: None):
     """Tests case #13 (Perturbation) initialization for 32bit precision
     Compare initialized DycoreState values with ground truth net-cdf files.
     """
-
-    #data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_32") # TODO: REMOVE
-    desc = "pace_test13_32_debug_rs"
+    desc = "test13_32_debug_rs"
     data_dir = os.path.join(BC_DIR, desc)
-
     attributes = ["phis", "delp", "u", "v"] # TODO: more attributes
-    max_eps_error = 1.9e-5
-    check_init(data_dir, attributes, max_eps_error, test_case=ai.Cases.baroclinic.value, gen_plots=True, desc=desc, plot_dir=desc)
+    max_eps_errors = [8e-4, 4e-3, 8e-6, 8e-6]
+    check_init(data_dir, attributes, max_eps_errors, test_case=ai.Cases.baroclinic.value, gen_plots=True, desc=desc, plot_dir=desc)
 
 
 def test_baroclinic_12_init64(setenv_pace64: None):
     """Tests case #12 (Steady State) initialization for 64bit precision
     Compare initialized DycoreState values with ground truth net-cdf files.
     """
-    #data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_12_64") # TODO: REMOVE
-    desc = "pace_test12_64_debug_rs"
+    desc = "test12_64_debug_rs"
     data_dir = os.path.join(BC_DIR, desc)
-
     attributes = ["phis", "delp", "u", "v"] # TODO: more attributes
-    max_eps_error = 2.2e-13
-    check_init(data_dir, attributes, max_eps_error, test_case=ai.Cases.baroclinic_ss.value, gen_plots=True, desc=desc, plot_dir=desc)
+    max_eps_errors = [5e-12, 1e-14, 2e-12, 2e-12]
+    check_init(data_dir, attributes, max_eps_errors, test_case=ai.Cases.baroclinic_ss.value, gen_plots=True, desc=desc, plot_dir=desc)
 
 
 def test_baroclinic_12_init32(setenv_pace32: None):
@@ -436,12 +429,11 @@ def test_baroclinic_12_init32(setenv_pace32: None):
     Compare initialized DycoreState values with ground truth net-cdf files.
     """
     #data_dir = os.path.join(BC_DIR, "C96.solo.BCmoist.pace_12_32") # TODO: REMOVE
-    desc = "pace_test12_32_debug_rs"
+    desc = "test12_32_debug_rs"
     data_dir = os.path.join(BC_DIR, desc)
-
     attributes = ["phis", "delp", "u", "v"] # TODO: more attributes
-    max_eps_error = 2e-5
-    check_init(data_dir, attributes, max_eps_error, test_case=ai.Cases.baroclinic_ss.value, gen_plots=True, desc=desc, plot_dir=desc)
+    max_eps_errors = [8e-4, 4e-3, 8e-6, 8e-6]
+    check_init(data_dir, attributes, max_eps_errors, test_case=ai.Cases.baroclinic_ss.value, gen_plots=True, desc=desc, plot_dir=desc)
 
 
 def test_tmp_grid_checks(setenv_pace64: None):
@@ -506,7 +498,7 @@ def test_rusty(setenv_pace64: None):
 
     num_halos = 3
     pace_ds = xr.open_dataset(pace_path)
-    # TODO: I know that the x isn't x_intercept, I should be able to figure that out without manually compensating.    
+    # TODO: I know that the x isn't x_interface, I should be able to figure that out without manually compensating.
     pace_xy0 = pace_ds['u'][num_halos:-(num_halos+1),num_halos:-num_halos,z]
 
     rank = 0
