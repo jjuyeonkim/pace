@@ -179,7 +179,7 @@ def setup_external_grid_data_a(
         eta_file: str
 ) -> Tuple[DampingCoefficients, GridData]:
     """TODO: flesh this out"""
-    grid_file_path = os.path.join(BC_DIR, "grid_C48", "C48.BC.tile" )
+    grid_file_path = os.path.join(BC_DIR, "grid_C48", "from_rusty/C48_GRID/C48_grid.tile" )
     ext_grid_config = ExternalNetcdfGridConfig(
         grid_type=0,
         grid_file_path=grid_file_path,
@@ -228,19 +228,19 @@ def setup_dycore(rank=0, usesCubedSphereComm=True, test_case=ai.Cases.baroclinic
     )
     quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
     eta_file = "tests/main/input/eta32.nc" # TODO: where to document file creation for developers?
-    metric_terms = MetricTerms(
-        quantity_factory=quantity_factory,
-        communicator=communicator,
-        eta_file=eta_file,
-    )
-    grid_data = GridData.new_from_metric_terms(metric_terms)
-    damping_coefficients = DampingCoefficients.new_from_metric_terms(metric_terms)
-
-    #damping_coefficients2, grid_data2 = setup_external_grid_data_a(
+    #metric_terms = MetricTerms(
     #    quantity_factory=quantity_factory,
     #    communicator=communicator,
     #    eta_file=eta_file,
     #)
+    #grid_data = GridData.new_from_metric_terms(metric_terms)
+    #damping_coefficients = DampingCoefficients.new_from_metric_terms(metric_terms)
+
+    damping_coefficients2, grid_data2 = setup_external_grid_data_a(
+        quantity_factory=quantity_factory,
+        communicator=communicator,
+        eta_file=eta_file,
+    )
 
     #damping_coefficients3, grid_data3 = setup_external_grid_data_b(
     #    quantity_factory=quantity_factory,
@@ -250,7 +250,7 @@ def setup_dycore(rank=0, usesCubedSphereComm=True, test_case=ai.Cases.baroclinic
 
     state = ai.init_analytic_state(
         analytic_init_case=test_case,
-        grid_data=grid_data,
+        grid_data=grid_data2,
         quantity_factory=quantity_factory,
         config=config,
         comm=communicator,
@@ -262,10 +262,10 @@ def setup_dycore(rank=0, usesCubedSphereComm=True, test_case=ai.Cases.baroclinic
 
     dycore = DynamicalCore(
         comm=communicator,
-        grid_data=grid_data,
+        grid_data=grid_data2,
         stencil_factory=stencil_factory,
         quantity_factory=quantity_factory,
-        damping_coefficients=damping_coefficients,
+        damping_coefficients=damping_coefficients2,
         config=config,
         timestep=timedelta(seconds=config.dt_atmos),
         phis=state.phis,
