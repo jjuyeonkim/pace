@@ -21,6 +21,31 @@ if not folder.exists():
 if not folder.is_dir():
     raise ValueError(f"Expected '{folder}' to be a directory.")
 
+
+# TODO: jk REMOVE IF NOT NEEDED!!
+# Values taken from SHIELD 3d modon test run
+# RESTART/fv_core.res.nc
+#
+# for 3d modon case:
+# km = 5
+ak = xr.DataArray(
+    dims=["km1"],
+    attrs=dict(units="Pa", _FillValue=False),
+    data=np.array(
+        [50000, 40000, 30000, 20000, 10000, 0]
+    ),
+)
+bk = xr.DataArray(
+    dims=["km1"],
+    attrs=dict(units="None", _FillValue=False),
+    data=np.array(
+        [0, 0.2, 0.4, 0.6, 0.8, 1]
+    ),
+)
+coefficients = xr.Dataset(data_vars={"ak": ak, "bk": bk})
+coefficients.to_netcdf(Path(folder) / "eta5.nc")
+
+
 # km = 79
 ak = xr.DataArray(
     dims=["km1"],
