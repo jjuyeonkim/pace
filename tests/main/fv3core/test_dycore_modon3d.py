@@ -15,6 +15,7 @@ from ndsl import (
     CubedSpherePartitioner,
     DaceConfig,
     GridIndexing,
+    Namelist,
     NullComm,
     QuantityFactory,
     StencilConfig,
@@ -76,6 +77,38 @@ def setup_dycore_config_NO_GOOD() -> DynamicalCoreConfig:
     )
     return config
 
+def setup_dycore_config_from_namelist() -> DynamicalCoreConfig:
+    import f90nml # TODO: jk move up if needed
+    from collections import OrderedDict # TODO: jk move up if needed
+
+    namelist_path = "/home/Janice.Kim/SHiELD_dev/SCRATCH/soloCI_amdbox_FV3-202411-public/CI/BATCH-CI/3dmodon/C128.solo.modon_zeroday/rundir/input.nml"
+    namelist_od = f90nml.read(namelist_path)
+    nml = Namelist.from_f90nml(namelist_od)
+    config_from_namelist = DynamicalCoreConfig.from_namelist(nml)
+
+    # Pace testing tweaks:
+    config_from_namelist.nwat = 6
+    config_from_namelist.hydrostatic = False # Maybe?
+
+    # TODO: Need to reconfigure somehow: 
+    # NotImplementedError: D-Grid Shallow Water Lagrangian Dynamics (D_SW): damp_vt misconfiguration, some are above a d_con of 1e-05.
+    # config = DGridShallowWaterLagrangianDynamicsConfig(dddmp=0.0, d2_bg=0.0, d2_bg_k1=0.0, d2_bg_k2=0.0, d4_bg=0.08, ke_bg=0.0, nor...f3d=False, do_skeb=False, d_con=0.0, vtdm4=0.0, inline_q=False, convert_ke=False, do_vort_damp=False, hydrostatic=True
+
+    # TODO: Need to reconfigure somehow:
+    # self.acoustic_dynamics = AcousticDynamics(
+    # pyFV3/pyfv3/stencils/dyn_core.py:505: in __init__
+    # self.update_height_on_d_grid = updatedzd.UpdateHeightOnDGrid(...
+    # damping_coefficients = DampingCoefficients(...
+    #         if any(column_namelist["damp_vt"].view[:] <= Float(1e-5)):
+    # >           raise NotImplementedError(
+    # "damp <= 1e-5 in column_namelist is not implemented")
+    # E           NotImplementedError: damp <= 1e-5 in column_namelist is not implemented
+
+    # TODO: Maybe this isn't the best way --- maybe I should configure like rossby and baroclinic and not from namelist
+
+    return config_from_namelist
+
+
 def setup_dycore_config() -> DynamicalCoreConfig:
     config = DynamicalCoreConfig(
         layout=(1, 1),
@@ -131,7 +164,8 @@ def setup_dycore(
     """Sets up Dycore state for analytic initialization"""
 
     backend = "numpy"
-    config = setup_dycore_config()
+    #config = setup_dycore_config()
+    config = setup_dycore_config_from_namelist()
     mpi_comm = NullComm(
         rank=rank, total_ranks=6 * config.layout[0] * config.layout[1], fill_value=0.0
     )
@@ -163,7 +197,7 @@ def setup_dycore(
         sizer=sizer, comm=communicator
     )
     quantity_factory = QuantityFactory.from_backend(sizer=sizer, backend=backend)
-    eta_file = "tests/main/input/eta79.nc"
+    eta_file = "tests/main/input/eta5.nc"
     metric_terms = MetricTerms(
         quantity_factory=quantity_factory,
         communicator=communicator,
@@ -205,6 +239,9 @@ def test_modon_initialization():
     """
     TODO desc
     """
+    # TODO jk Testing out namelist functionality while I'm at it.
+    setup_dycore_config_from_namelist()
+
     _, state_instability, _ = setup_dycore(
         test_case=ai.AnalyticCase.modon3d
     )
