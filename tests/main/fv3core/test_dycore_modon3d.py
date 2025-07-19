@@ -88,7 +88,7 @@ def setup_dycore_config_from_namelist() -> DynamicalCoreConfig:
 
     # Pace testing tweaks:
     config_from_namelist.nwat = 6
-    config_from_namelist.hydrostatic = False # Maybe?
+    #config_from_namelist.hydrostatic = False # Maybe?
 
     # TODO: Need to reconfigure somehow: 
     # NotImplementedError: D-Grid Shallow Water Lagrangian Dynamics (D_SW): damp_vt misconfiguration, some are above a d_con of 1e-05.
@@ -240,8 +240,6 @@ def test_modon_initialization():
     TODO desc
     """
     # TODO jk Testing out namelist functionality while I'm at it.
-    setup_dycore_config_from_namelist()
-
     _, state_instability, _ = setup_dycore(
         test_case=ai.AnalyticCase.modon3d
     )
