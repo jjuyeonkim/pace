@@ -37,10 +37,10 @@ from pace.grid import GeneratedGridConfig, GridInitializerSelector
 from pace.initialization import InitializerSelector
 from pace.safety_checks import SafetyChecker
 from pace.state import DriverState
-from pyFV3 import DynamicalCore, DynamicalCoreConfig
-from pyFV3.initialization.analytic_init import AnalyticCase
-from pySHiELD import Physics, PhysicsConfig
-from pySHiELD.update import update_atmos_state
+from pyfv3 import DynamicalCore, DynamicalCoreConfig
+from pyfv3.initialization.analytic_init import AnalyticCase
+from pyshield import Physics, PhysicsConfig
+from pyshield.update import update_atmos_state
 
 
 try:
@@ -300,10 +300,10 @@ class DriverConfig:
             isinstance(kwargs["stencil_config"], dict)
             and "compilation_config" in kwargs["stencil_config"].keys()
         ):
-            kwargs["stencil_config"][
-                "compilation_config"
-            ] = CompilationConfig.from_dict(
-                data=kwargs["stencil_config"]["compilation_config"]
+            kwargs["stencil_config"]["compilation_config"] = (
+                CompilationConfig.from_dict(
+                    data=kwargs["stencil_config"]["compilation_config"]
+                )
             )
 
         return dacite.from_dict(
@@ -483,7 +483,11 @@ class Driver:
                 stencil_compare_comm=stencil_compare_comm,
             )
             ndsl_log.info("setting up grid started")
-            (damping_coefficients, driver_grid_data, grid_data,) = self.config.get_grid(
+            (
+                damping_coefficients,
+                driver_grid_data,
+                grid_data,
+            ) = self.config.get_grid(
                 quantity_factory=self.quantity_factory,
                 communicator=communicator,
             )
