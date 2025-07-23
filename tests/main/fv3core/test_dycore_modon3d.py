@@ -114,7 +114,7 @@ def setup_dycore_config() -> DynamicalCoreConfig:
         layout=(1, 1),
         npx=48,
         npy=48,
-        npz=79,
+        npz=5,
         ntiles=6,
         nwat=6,
         dt_atmos=225,
