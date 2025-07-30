@@ -85,3 +85,22 @@ def test_types_match():
     Checks both dataclass attributes and property methods.
     """
     assert_types_match(CONFIG_CLASSES)
+
+def test_from_nml():
+    """TODO: throw this away once you understand this better"""
+    from ndsl import Namelist
+    import f90nml
+
+    f90_namelist_path = "/home/Janice.Kim/SHiELD_dev/SCRATCH/soloCI_amdbox_FV3-202411-public/CI/BATCH-CI/C48.BCmoist.pace_test12_64_debug/input.nml"
+
+    f90_namelist = f90nml.read(f90_namelist_path)
+    for key, value in f90_namelist.items():
+        print(f"Key: {key}, Value: {value}")
+    dcconfig1 = pyfv3.DynamicalCoreConfig.from_f90nml(f90_namelist)
+
+    namelist = Namelist.from_f90nml(f90_namelist)
+    dcconfig2 = pyfv3.DynamicalCoreConfig.from_namelist(namelist)
+
+    # Compare the two dcconfigs
+    assert(dcconfig1.__dataclass_fields__ == dcconfig2.__dataclass_fields__)
+    # NOTE: If they're both the same, then we might not need the actual Namelist.from_f90nml anymore
