@@ -1,10 +1,13 @@
 import collections
 import dataclasses
-import typing
-
+import os
 import pytest
+import typing
+import f90nml
+import yaml
 
 import pyfv3._config
+from ndsl import Namelist
 
 
 CONFIG_CLASSES = [
@@ -86,21 +89,45 @@ def test_types_match():
     """
     assert_types_match(CONFIG_CLASSES)
 
-def test_from_nml():
-    """TODO: throw this away once you understand this better"""
-    from ndsl import Namelist
-    import f90nml
 
-    f90_namelist_path = "/home/Janice.Kim/SHiELD_dev/SCRATCH/soloCI_amdbox_FV3-202411-public/CI/BATCH-CI/C48.BCmoist.pace_test12_64_debug/input.nml"
+def test_dycore_config_from_yaml():
+    """ TODO """
+    yaml_path = os.path.join("examples", "configs", "baroclinic_c12.yaml")
+    with open(os.path.abspath(yaml_path), "r") as f:
+        yaml_config = yaml.safe_load(f)
+    dcconfig1 = pyfv3.DynamicalCoreConfig.from_yaml(yaml_path)
+
+    # TODO: Is it too simplistic to do random spot checks here? Leaving it for now
+
+    # Check matching parameters
+    assert(yaml_config["dt_atmos"] == getattr(dcconfig1, "dt_atmos"))
+    assert(yaml_config["nz"] == getattr(dcconfig1, "npz"))
+
+    dycore_specific_params = ["hydrostatic"]
+    for param in dycore_specific_params:
+        assert(yaml_config["dycore_config"][param] == getattr(dcconfig1, param))
+
+    # Check default parameters, not specified in the yaml
+    dcconfig_default = pyfv3.DynamicalCoreConfig()
+
+    default_params = ["adiabatic"]
+    for param in default_params:
+        assert(param not in yaml_config.keys())
+        assert(param not in yaml_config["dycore_config"].keys())
+        assert(getattr(dcconfig1, param) == getattr(dcconfig_default, param))
+
+
+def test_dycore_config_from_f90nml():
+    """ TODO """
+    # TODO: Is it too simplistic to do random spot checks here?
+    f90_namelist_path = os.path.join("examples", "configs", "baroclinic_stable_c48_input.nml")
 
     f90_namelist = f90nml.read(f90_namelist_path)
-    for key, value in f90_namelist.items():
-        print(f"Key: {key}, Value: {value}")
     dcconfig1 = pyfv3.DynamicalCoreConfig.from_f90nml(f90_namelist)
 
     namelist = Namelist.from_f90nml(f90_namelist)
     dcconfig2 = pyfv3.DynamicalCoreConfig.from_namelist(namelist)
 
-    # Compare the two dcconfigs
     assert(dcconfig1.__dataclass_fields__ == dcconfig2.__dataclass_fields__)
-    # NOTE: If they're both the same, then we might not need the actual Namelist.from_f90nml anymore
+    assert(dcconfig1.dt_atmos == dcconfig2.dt_atmos)
+    assert(dataclasses.asdict(dcconfig1) == dataclasses.asdict(dcconfig2))
