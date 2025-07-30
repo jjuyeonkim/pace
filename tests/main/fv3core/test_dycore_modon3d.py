@@ -29,54 +29,6 @@ from ndsl.performance.timer import NullTimer
 from pyfv3 import DycoreState, DynamicalCore, DynamicalCoreConfig
 
 
-def setup_dycore_config_NO_GOOD() -> DynamicalCoreConfig:
-    config = DynamicalCoreConfig(
-        layout=(4, 4),
-        npx=48,
-        npy=48,
-        npz=79, # TODO: eventually set to 5?
-        ntiles=6,
-        nwat=6,
-        dt_atmos=1200,
-        #a_imp=1.0,  # not in Joseph's
-        #beta=0.0,  # not in Joseph's
-        consv_te=False,  # not implemented, needs allreduce
-        d2_bg=0.0,
-        d2_bg_k1=0.0,
-        d2_bg_k2=0.0,
-        d4_bg=0.08,
-        d_con=0.0,  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
-        d_ext=0.0,
-        #dddmp=0.5,  # not in Joseph's
-        # delt_max=0.002,  # TODO: What is equiv in SHiELD_build?
-        #do_sat_adj=True, # not in Joseph's
-        do_vort_damp=False,
-        fill=False,
-        hord_dp=8,
-        hord_mt=8,
-        hord_tm=8,
-        hord_tr=8,
-        hord_vt=8,
-        hydrostatic=False, # True in Joseph's, keeping false for now
-        k_split=2,
-        ke_bg=0.0,  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
-        kord_mt=9,
-        kord_tm=-9,
-        kord_tr=9,
-        kord_wz=9,
-        n_split=8,
-        nord=2,
-        p_fac=0.05,  # Default is 0.05 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
-        #rf_fast=True,  # not in Joseph's 
-        # rf_cutoff=3000.0,  # not in Joseph's
-        #tau=10.0,  # not in Joseph's
-        vtdm4=0.00,
-        #z_tracer=True, # not in Joseph's
-        do_qa=True, # not in Joseph's
-        # moist_phys=True, # not in Joseph's
-    )
-    return config
-
 def setup_dycore_config_from_namelist() -> DynamicalCoreConfig:
     import f90nml # TODO: jk move up if needed
     from collections import OrderedDict # TODO: jk move up if needed
@@ -87,85 +39,90 @@ def setup_dycore_config_from_namelist() -> DynamicalCoreConfig:
     config_from_namelist = DynamicalCoreConfig.from_namelist(nml)
 
     # Pace testing tweaks:
+    # TODO: Might as well see how different the configs are when read from input.nml.
     config_from_namelist.nwat = 6
     #config_from_namelist.hydrostatic = False # Maybe?
-
-    # TODO: Need to reconfigure somehow: 
-    # NotImplementedError: D-Grid Shallow Water Lagrangian Dynamics (D_SW): damp_vt misconfiguration, some are above a d_con of 1e-05.
-    # config = DGridShallowWaterLagrangianDynamicsConfig(dddmp=0.0, d2_bg=0.0, d2_bg_k1=0.0, d2_bg_k2=0.0, d4_bg=0.08, ke_bg=0.0, nor...f3d=False, do_skeb=False, d_con=0.0, vtdm4=0.0, inline_q=False, convert_ke=False, do_vort_damp=False, hydrostatic=True
-
-    # TODO: Need to reconfigure somehow:
-    # self.acoustic_dynamics = AcousticDynamics(
-    # pyFV3/pyfv3/stencils/dyn_core.py:505: in __init__
-    # self.update_height_on_d_grid = updatedzd.UpdateHeightOnDGrid(...
-    # damping_coefficients = DampingCoefficients(...
-    #         if any(column_namelist["damp_vt"].view[:] <= Float(1e-5)):
-    # >           raise NotImplementedError(
-    # "damp <= 1e-5 in column_namelist is not implemented")
-    # E           NotImplementedError: damp <= 1e-5 in column_namelist is not implemented
-
-    # TODO: Maybe this isn't the best way --- maybe I should configure like rossby and baroclinic and not from namelist
+    config_from_namelist.a_imp = 1.0  # Not in Joseph's, but needed to run.
+    config_from_namelist.d_con = 0.0  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
+    config_from_namelist.do_vort_damp = True  # False in Joseph's but False causes NotImplementedError 
+    config_from_namelist.ke_bg = 0.0  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
+    config_from_namelist.p_fac = 0.05  # Default is 0.05 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
+    config_from_namelist.vtdm4 = 0.06  # 0.00 in Joseph's, but gives NotImplementedError (damp_vt related)
+    config_from_namelist.do_qa = True
+    config_from_namelist.hydrostatic = False
 
     return config_from_namelist
 
 
 def setup_dycore_config() -> DynamicalCoreConfig:
     config = DynamicalCoreConfig(
-        layout=(1, 1),
-        npx=48,
-        npy=48,
+        layout=[1, 1],
+        npx=129,
+        npy=129,
         npz=5,
         ntiles=6,
         nwat=6,
-        dt_atmos=225,
-        a_imp=1.0,
-        beta=0.0,
-        consv_te=False,  # not implemented, needs allreduce
+        dt_atmos=1200,
+        a_imp=1.0,  # Not in Joseph's, but needed to run.
+        #beta=0.0,  # Not in Joseph's
+        consv_te=0.0,  # not implemented, needs allreduce # TODO: bool or float?
         d2_bg=0.0,
-        d2_bg_k1=0.2,
-        d2_bg_k2=0.1,
-        d4_bg=0.15,
+        d2_bg_k1=0.0,
+        d2_bg_k2=0.0,
+        d4_bg=0.08,
         d_con=0.0,  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
         d_ext=0.0,
-        dddmp=0.5,
+        #dddmp=0.5,  # not in Joseph's
         # delt_max=0.002,  # TODO: What is equiv in SHiELD_build?
-        do_sat_adj=True,
-        do_vort_damp=True,
-        fill=True,
-        hord_dp=6,
-        hord_mt=6,
-        hord_tm=6,
+        #do_sat_adj=True, # not in Joseph's
+        do_vort_damp=True, # False in Joseph's but False causes NotImplementedError 
+        fill=False,
+        hord_dp=8,
+        hord_mt=8,
+        hord_tm=8,
         hord_tr=8,
-        hord_vt=6,
+        hord_vt=8,
         hydrostatic=False,
-        k_split=1,
+        k_split=2,
         ke_bg=0.0,  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
         kord_mt=9,
         kord_tm=-9,
         kord_tr=9,
         kord_wz=9,
-        n_split=1,
-        nord=3,
+        n_split=8,
+        nord=2,
+        #nord=3,
         p_fac=0.05,  # Default is 0.05 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
-        rf_fast=True,
-        rf_cutoff=3000.0,
-        tau=10.0,
-        vtdm4=0.06,
-        z_tracer=True,
-        do_qa=True,
-        moist_phys=True,
+        #rf_fast=True,  # not in Joseph's 
+        # rf_cutoff=3000.0,  # not in Joseph's
+        #tau=10.0,  # not in Joseph's
+        vtdm4=0.06, # 0.00 in Joseph's, but gives NotImplementedError (damp_vt related)
+        #z_tracer=True, # not in Joseph's
+        do_qa=True, # not in Joseph's
+        # moist_phys=True, # not in Joseph's
+        adiabatic=True,
+        n_sponge=-1,
     )
     return config
 
 
+
 def setup_dycore(
-    rank=0, usesCubedSphereComm=True, test_case=ai.AnalyticCase.baroclinic_instability
+    rank=0, usesCubedSphereComm=True, test_case=ai.AnalyticCase.modon3d
 ) -> DycoreState:
     """Sets up Dycore state for analytic initialization"""
 
     backend = "numpy"
-    #config = setup_dycore_config()
+    config1 = setup_dycore_config()
     config = setup_dycore_config_from_namelist()
+     # Compare the two dcconfigs
+
+    # TODO: temporary... delete once you know what's different.
+    import dataclasses
+    assert(config1.__dataclass_fields__ == config.__dataclass_fields__)
+    assert(config1.dt_atmos == config.dt_atmos)
+    assert(dataclasses.asdict(config1) == dataclasses.asdict(config))
+
     mpi_comm = NullComm(
         rank=rank, total_ranks=6 * config.layout[0] * config.layout[1], fill_value=0.0
     )
