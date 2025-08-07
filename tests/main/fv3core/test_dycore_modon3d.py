@@ -33,7 +33,9 @@ def setup_dycore_config_from_namelist() -> DynamicalCoreConfig:
     import f90nml # TODO: jk move up if needed
     from collections import OrderedDict # TODO: jk move up if needed
 
-    namelist_path = "/home/Janice.Kim/SHiELD_dev/SCRATCH/soloCI_amdbox_FV3-202411-public/CI/BATCH-CI/3dmodon/C128.solo.modon_zeroday/rundir/input.nml"
+    #namelist_path = "/home/Janice.Kim/SHiELD_dev/SCRATCH/soloCI_amdbox_FV3-202411-public/CI/BATCH-CI/3dmodon/C128.solo.modon_zeroday/rundir/input.nml"
+    #namelist_path = "/home/Janice.Kim/SHiELD_dev/SCRATCH/soloCI_amdbox_FV3-202411-public/CI/BATCH-CI/3dmodon/C128.solo.modon_zeroday_no_schmidt_nh/rundir/input.nml"
+    namelist_path = "/home/Janice.Kim/SHiELD_dev/SCRATCH/soloCI_amdbox_FV3-202411-public/CI/BATCH-CI/3dmodon/C128.solo.modon_zeroday_no_schmidt_nh_pace_compare/rundir/input.nml"
     namelist_od = f90nml.read(namelist_path)
     nml = Namelist.from_f90nml(namelist_od)
     config_from_namelist = DynamicalCoreConfig.from_namelist(nml)
@@ -41,22 +43,19 @@ def setup_dycore_config_from_namelist() -> DynamicalCoreConfig:
     # Pace testing tweaks:
     # TODO: Might as well see how different the configs are when read from input.nml.
     config_from_namelist.nwat = 6
-    #config_from_namelist.hydrostatic = False # Maybe?
     config_from_namelist.a_imp = 1.0  # Not in Joseph's, but needed to run.
-    config_from_namelist.d_con = 0.0  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
-    config_from_namelist.do_vort_damp = True  # False in Joseph's but False causes NotImplementedError 
-    config_from_namelist.ke_bg = 0.0  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
+    #config_from_namelist.do_vort_damp = True  # False in Joseph's but False causes NotImplementedError 
+    #config_from_namelist.ke_bg = 0.0  # Default is 0 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
     config_from_namelist.p_fac = 0.05  # Default is 0.05 in GFDL_atmos_cubed_sphere/model/fv_arrays.F90
-    config_from_namelist.vtdm4 = 0.06  # 0.00 in Joseph's, but gives NotImplementedError (damp_vt related)
+    #config_from_namelist.vtdm4 = 0.06  # 0.00 in Joseph's, but gives NotImplementedError (damp_vt related)
     config_from_namelist.do_qa = True
-    config_from_namelist.hydrostatic = False
 
     return config_from_namelist
 
 
 def setup_dycore_config() -> DynamicalCoreConfig:
     config = DynamicalCoreConfig(
-        layout=[1, 1],
+        layout=[4, 4],
         npx=129,
         npy=129,
         npz=5,
