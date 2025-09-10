@@ -6,7 +6,7 @@ on:
     inputs:
       component_trigger:
         type: boolean
-        default: false
+        default: true
         required: false
       component_name:
         type: string
