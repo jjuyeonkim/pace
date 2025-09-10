@@ -77,6 +77,7 @@ jobs:
           ls *
           echo "ls ${GITHUB_WORKSPACE}/pace"
           ls ${GITHUB_WORKSPACE}/pace
+          git -C ${GITHUB_WORKSPACE}/pace log -1
 
       - name: "Janice's Sanity Check 3"
         run: |
@@ -84,6 +85,7 @@ jobs:
           pwd
           echo "ls ${GITHUB_WORKSPACE}/pace/NDSL"
           ls ${GITHUB_WORKSPACE}/pace/NDSL
+          git -C ${GITHUB_WORKSPACE}/pace/NDSL log -1
 
       - name: "Janice's Sanity Check 4"
         run: |
@@ -91,6 +93,7 @@ jobs:
           pwd
           echo "ls ${GITHUB_WORKSPACE}/pace/pyFV3"
           ls ${GITHUB_WORKSPACE}/pace/pyFV3
+          git -C ${GITHUB_WORKSPACE}/pace/pyFV3 log -1
 
       - name: "Janice's Sanity Check 5"
         run: |
@@ -98,6 +101,7 @@ jobs:
           pwd
           echo "ls ${GITHUB_WORKSPACE}/pace/pySHiELD"
           ls ${GITHUB_WORKSPACE}/pace/pySHiELD
+          git -C ${GITHUB_WORKSPACE}/pace/pySHiELD log -1
 
       - name: "Janice's Checkout submodule 20250908_namelist_2 branches"
         run: |
