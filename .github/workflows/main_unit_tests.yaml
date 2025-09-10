@@ -48,8 +48,8 @@ jobs:
           echo "inputs.component_name: " ${{inputs.component_name}}
           echo "pwd: "
           pwd
-	  echo "ls :"
-	  ls
+          echo "ls :"
+          ls
 
       - name: "Checkout NDSL recursively using 20250908_namelist_2 branch"
         uses: actions/checkout@v5
