@@ -77,14 +77,20 @@ jobs:
           ls *
           echo "ls ${GITHUB_WORKSPACE}/pace"
           ls ${GITHUB_WORKSPACE}/pace
-
-      - name: "Janice's Checkout submodule 20250908_namelist_2 branches"
-        run: |
-          cd ${GITHUB_WORKSPACE}
-          pwd
+          cd ${GITHUB_WORKSPACE}/pace
           cd NDSL && git checkout 20250908_namelist_2 && cd ../
           cd pyFV3 && git checkout 20250908_namelist_2 && cd ../
           cd pySHiELD && git checkout 20250908_namelist_2 && cd ../
+
+      - name: "Janice's Checkout submodule 20250908_namelist_2 branches"
+        run: |
+          cd ${GITHUB_WORKSPACE}/pace
+          pwd
+          echo "ls ${GITHUB_WORKSPACE}/pace"
+          git -C . log -1
+          git -C ./pySHiELD log -1
+          git -C ./pyFV3 log -1
+          git -C ./NDSL log -1
 
       - name: Install packages
         run: |
