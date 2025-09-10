@@ -37,12 +37,12 @@ jobs:
         if: ${{ inputs.component_trigger }}
         uses: actions/checkout@v4
         with:
-          submodules: 'false'
+          submodules: 'recursive'
           repository: jjuyeonkim/pace
           path: pace
           ref: 20250908_namelist_2
 
-      - name: "Janice's Sanity Check"
+      - name: "Janice's Sanity Check 1"
         run: |
           echo "GITHUB_WORKSPACE: " ${GITHUB_WORKSPACE}
           echo "inputs.component_name: " ${{inputs.component_name}}
@@ -50,30 +50,6 @@ jobs:
           pwd
           echo "ls :"
           ls
-
-      - name: "Checkout NDSL recursively using 20250908_namelist_2 branch"
-        uses: actions/checkout@v5
-        with:
-          submodules: 'recursive'
-          repository: jjuyeonkim/ndsl
-          path: NDSL
-          ref: 20250908_namelist_2
-
-      - name: "Checkout pyFV3 recursively using 20250908_namelist_2 branch"
-        uses: actions/checkout@v5
-        with:
-          submodules: 'recursive'
-          repository: jjuyeonkim/pyfv3
-          path: pyFV3
-          ref: 20250908_namelist_2
-
-      - name: "Checkout pySHiELD recursively using 20250908_namelist_2 branch"
-        uses: actions/checkout@v5
-        with:
-          submodules: 'recursive'
-          repository: jjuyeonkim/pyshield
-          path: pySHiELD
-          ref: 20250908_namelist_2
 
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
@@ -92,6 +68,23 @@ jobs:
         with:
           submodules: 'recursive'
           path: pace/${{inputs.component_name}}
+
+      - name: "Janice's Sanity Check 2"
+        run: |
+          echo "pwd: "
+          pwd
+          echo "ls :"
+          ls *
+          echo "ls ${GITHUB_WORKSPACE}/pace"
+          ls ${GITHUB_WORKSPACE}/pace
+
+      - name: "Janice's Checkout submodule 20250908_namelist_2 branches"
+        run: |
+          cd ${GITHUB_WORKSPACE}/pace
+          pwd
+          cd NDSL && git checkout 20250908_namelist_2 && cd ../
+          cd pyFV3 && git checkout 20250908_namelist_2 && cd ../
+          cd pySHiELD && git checkout 20250908_namelist_2 && cd ../
 
       - name: Install packages
         run: |
