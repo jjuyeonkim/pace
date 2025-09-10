@@ -42,6 +42,15 @@ jobs:
           path: pace
           ref: 20250908_namelist_2
 
+      - name: "Janice's Sanity Check"
+        run: |
+          echo "GITHUB_WORKSPACE: " ${GITHUB_WORKSPACE}
+          echo "inputs.component_name: " ${{inputs.component_name}}
+          echo "pwd: "
+          pwd
+	  echo "ls :"
+	  ls
+
       - name: "Checkout NDSL recursively using 20250908_namelist_2 branch"
         uses: actions/checkout@v5
         with:
