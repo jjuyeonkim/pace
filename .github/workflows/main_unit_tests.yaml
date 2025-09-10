@@ -80,7 +80,7 @@ jobs:
 
       - name: "Janice's Checkout submodule 20250908_namelist_2 branches"
         run: |
-          cd ${GITHUB_WORKSPACE}/pace
+          cd ${GITHUB_WORKSPACE}
           pwd
           cd NDSL && git checkout 20250908_namelist_2 && cd ../
           cd pyFV3 && git checkout 20250908_namelist_2 && cd ../
