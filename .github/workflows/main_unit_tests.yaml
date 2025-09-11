@@ -27,15 +27,6 @@ on:
   pull_request: # ... a PR is opened / updated
   merge_group:  # ... the PR is added to the merge queue
   push:
-    inputs:
-      component_trigger:
-        type: boolean
-        default: true
-        required: false
-      component_name:
-        type: string
-        default: ''
-        required: false
     branches:
       - 20250908_namelist_4_CI_TEST
 
@@ -121,9 +112,9 @@ jobs:
         run: rm -rf ${GITHUB_WORKSPACE}/pace/${{inputs.component_name}}
 
       - name: Checkout out hash that triggered CI
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
+          submodules: 'false'
           path: pace/${{inputs.component_name}}
 
       - name: "Sanity Check 2"
