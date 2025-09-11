@@ -116,59 +116,10 @@ jobs:
 
       - name: "Janice's Sanity Check 2"
         run: |
-          echo "pwd: "
-          pwd
-          echo "ls :"
-          ls *
-          git -C . log -1
-          git remote -v
-
-      - name: "Janice's Sanity Check 2b"
-        run: |
-          echo "ls ${GITHUB_WORKSPACE}/pace"
-          ls ${GITHUB_WORKSPACE}/pace
           git -C ${GITHUB_WORKSPACE}/pace log -1
-
-      - name: "Janice's Sanity Check 3"
-        run: |
-          echo "pwd: "
-          pwd
-          echo "ls ${GITHUB_WORKSPACE}/NDSL"
-          ls ${GITHUB_WORKSPACE}/NDSL
-          git -C ${GITHUB_WORKSPACE}/NDSL log -1
-          cd ${GITHUB_WORKSPACE}/NDSL
-          git remote -v
-
-      - name: "Janice's Sanity Check 4"
-        run: |
-          echo "pwd: "
-          pwd
-          echo "ls ${GITHUB_WORKSPACE}/pyFV3"
-          ls ${GITHUB_WORKSPACE}/pyFV3
-          git -C ${GITHUB_WORKSPACE}/pyFV3 log -1
-          cd ${GITHUB_WORKSPACE}/pyFV3
-          git remote -v
-
-      - name: "Janice's Sanity Check 5"
-        run: |
-          echo "pwd: "
-          pwd
-          echo "ls ${GITHUB_WORKSPACE}/pySHiELD"
-          ls ${GITHUB_WORKSPACE}/pySHiELD
-          git -C ${GITHUB_WORKSPACE}/pySHiELD log -1
-          cd ${GITHUB_WORKSPACE}/pySHiELD
-          git remote -v
-
-      - name: "Janice's look out submodule 20250908_namelist_2 branches"
-        run: |
-          cd ${GITHUB_WORKSPACE}/pace
-          pwd
-          echo "ls ${GITHUB_WORKSPACE}/pace"
-          git -C . log -1
-          git -C ./pySHiELD log -1
-          git -C ./pyFV3 log -1
-          git -C ./NDSL log -1
-          # TODO Add checkouts if this is okay?
+          git -C ${GITHUB_WORKSPACE}/pace/NDSL log -1
+          git -C ${GITHUB_WORKSPACE}/pace/pyFV3 log -1
+          git -C ${GITHUB_WORKSPACE}/pace/pySHiELD log -1
 
       - name: Install packages
         run: |
