@@ -49,6 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout pace@20250908_namelist_2"
+        if: ${{ inputs.component_trigger }}
         uses: actions/checkout@v5
         with:
           submodules: 'false'
@@ -136,12 +137,8 @@ jobs:
         shell: bash -l {0}
         run: |
           cd ${GITHUB_WORKSPACE}/pace
-          pip install dask==2025.7.0
-          pip install numpy==1.26.4
           pip install .[test]
-          pip install dask==2025.7.0
           pip install numpy==1.26.4
-          #conda remove sqlite
 
       - name: Print versions
         shell: bash -l {0}
