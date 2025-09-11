@@ -141,7 +141,7 @@ jobs:
           pip install .[test]
           pip install dask==2025.7.0
           pip install numpy==1.26.4
-          conda remove sqlite
+          #conda remove sqlite
 
       - name: Print versions
         shell: bash -l {0}
