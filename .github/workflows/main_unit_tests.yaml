@@ -37,7 +37,7 @@ on:
         default: ''
         required: false
     branches:
-      - 20250908_namelist_2
+      - 20250908_namelist_4_CI_TEST
 
 # cancel running jobs if theres a newer push
 concurrency:
@@ -136,7 +136,10 @@ jobs:
         shell: bash -l {0}
         run: |
           cd ${GITHUB_WORKSPACE}/pace
+          pip install dask==2025.7.0
+          pip install numpy==1.26.4
           pip install .[test]
+          pip install dask==2025.7.0
           pip install numpy==1.26.4
           conda remove sqlite
 
