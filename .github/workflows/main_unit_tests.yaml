@@ -86,7 +86,7 @@ jobs:
           echo "ls ${GITHUB_WORKSPACE}/pace"
           ls "${GITHUB_WORKSPACE}/pace"
           echo ""
-          echo "ls ${GITHUB_WORKSPACE}/NDSL"
+          echo "ls ${GITHUB_WORKSPACE}/pace/NDSL"
           ls "${GITHUB_WORKSPACE}/pace/NDSL"
           echo ""
           echo "ls ${GITHUB_WORKSPACE}/pace/pyFV3"
@@ -108,11 +108,11 @@ jobs:
         if: ${{ inputs.component_trigger }}
         run: rm -rf ${GITHUB_WORKSPACE}/pace/${{inputs.component_name}}
 
-      - name: Checkout out hash that triggered CI
-        uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-          path: pace/${{inputs.component_name}}
+      #- name: Checkout out hash that triggered CI
+      #  uses: actions/checkout@v4
+      #  with:
+      #    submodules: 'recursive'
+      #    path: pace/${{inputs.component_name}}
 
       - name: "Janice's Sanity Check 2"
         run: |
