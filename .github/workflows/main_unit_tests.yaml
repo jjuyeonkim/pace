@@ -48,7 +48,7 @@ jobs:
           submodules: 'false'
           repository: jjuyeonkim/pace
           path: ${GITHUB_WORKSPACE}/pace
-          ref: 20250908_namelist_3
+          ref: 20250908_namelist_3_CI_TEST
           fetch-depth: 0
 
       - name: "Checkout NDSL"
