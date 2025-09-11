@@ -120,11 +120,11 @@ jobs:
         if: ${{ inputs.component_trigger }}
         run: rm -rf ${GITHUB_WORKSPACE}/pace/${{inputs.component_name}}
 
-      #- name: Checkout out hash that triggered CI
-      #  uses: actions/checkout@v4
-      #  with:
-      #    submodules: 'recursive'
-      #    path: pace/${{inputs.component_name}}
+      - name: Checkout out hash that triggered CI
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          path: pace/${{inputs.component_name}}
 
       - name: "Sanity Check 2"
         run: |
