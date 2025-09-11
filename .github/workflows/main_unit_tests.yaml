@@ -35,12 +35,13 @@ jobs:
     steps:
       - name: "External trigger: Checkout pace/develop"
         if: ${{ inputs.component_trigger }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: 'recursive'
           repository: jjuyeonkim/pace
           path: pace
-          ref: 20250908_namelist_2
+          ref: 20250908_namelist_3
+          fetch-depth: 0
 
       - name: "Janice's Sanity Check 1"
         run: |
