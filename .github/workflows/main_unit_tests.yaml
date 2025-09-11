@@ -39,18 +39,18 @@ jobs:
         with:
           submodules: 'recursive'
           repository: jjuyeonkim/pace
-          path: pace
+          path: ${GITHUB_WORKSPACE}/pace
           ref: 20250908_namelist_3
           fetch-depth: 0
 
       - name: "Janice's Sanity Check 1"
         run: |
           echo "GITHUB_WORKSPACE: " ${GITHUB_WORKSPACE}
-          echo "inputs.component_name: " ${{inputs.component_name}}
+          echo "inputs.component_name: " ${ inputs.component_name }
           echo "pwd: "
           pwd
-          echo "ls :"
-          ls
+          echo "ls : ${GITHUB_WORKSPACE}"
+          ls ${GITHUB_WORKSPACE}
 
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
