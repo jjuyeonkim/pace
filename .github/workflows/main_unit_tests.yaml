@@ -46,10 +46,11 @@ jobs:
       - name: "Janice's Sanity Check 1"
         run: |
           echo "GITHUB_WORKSPACE: " ${GITHUB_WORKSPACE}
-          echo "inputs.component_name: " ${ inputs.component_name }
+          echo "inputs.component_name: " ${{ inputs.component_name }}
+          echo "inputs.component_trigger: " ${{ inputs.component_trigger }}
           echo "pwd: "
           pwd
-          echo "ls : ${GITHUB_WORKSPACE}"
+          echo "ls ${GITHUB_WORKSPACE}"
           ls ${GITHUB_WORKSPACE}
 
       - name: Setup Python 3.11
