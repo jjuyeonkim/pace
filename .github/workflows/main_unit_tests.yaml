@@ -47,7 +47,7 @@ jobs:
         with:
           submodules: 'false'
           repository: jjuyeonkim/pace
-          path: "${GITHUB_WORKSPACE}/pace"
+          path: pace
           ref: 20250908_namelist_3_CI_TEST
           fetch-depth: 0
 
@@ -56,7 +56,7 @@ jobs:
         with:
           submodules: 'recursive'
           repository: jjuyeonkim/ndsl
-          path: "${GITHUB_WORKSPACE}/pace/NDSL"
+          path: pace/NDSL
           ref: 20250908_namelist_2
           fetch-depth: 0
 
@@ -65,7 +65,7 @@ jobs:
         with:
           submodules: 'recursive'
           repository: jjuyeonkim/pyfv3
-          path: "${GITHUB_WORKSPACE}/pace/pyFV3"
+          path: pace/pyFV3
           ref: 20250908_namelist_2
           fetch-depth: 0
 
@@ -74,7 +74,7 @@ jobs:
         with:
           submodules: 'recursive'
           repository: jjuyeonkim/pyshield
-          path: "${GITHUB_WORKSPACE}/pace/pySHiELD"
+          path: pace/pySHiELD
           ref: 20250908_namelist_2
           fetch-depth: 0
 
