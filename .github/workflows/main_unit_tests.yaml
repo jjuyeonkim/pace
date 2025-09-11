@@ -15,6 +15,15 @@ on:
   pull_request: # ... a PR is opened / updated
   merge_group:  # ... the PR is added to the merge queue
   push:
+    inputs:
+      component_trigger:
+        type: boolean
+        default: true
+        required: false
+      component_name:
+        type: string
+        default: ''
+        required: false
     branches:
       - 20250908_namelist_3_CI_TEST
       - 20250908_namelist_2
@@ -33,25 +42,59 @@ jobs:
   pace_main_unit_tests:
     runs-on: ubuntu-latest
     steps:
-      - name: "External trigger: Checkout pace/develop"
-        if: ${{ inputs.component_trigger }}
+      - name: "Checkout pace/20250908_namelist_3"
         uses: actions/checkout@v5
         with:
-          submodules: 'recursive'
+          submodules: 'false'
           repository: jjuyeonkim/pace
           path: ${GITHUB_WORKSPACE}/pace
           ref: 20250908_namelist_3
           fetch-depth: 0
 
+      - name: "Checkout NDSL"
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          repository: jjuyeonkim/ndsl
+          path: ${GITHUB_WORKSPACE}/pace/NDSL
+          ref: 20250908_namelist_2
+          fetch-depth: 0
+
+      - name: "Checkout pyFV3"
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          repository: jjuyeonkim/pyfv3
+          path: ${GITHUB_WORKSPACE}/pace/pyFV3
+          ref: 20250908_namelist_2
+          fetch-depth: 0
+
+      - name: "Checkout pySHiELD"
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          repository: jjuyeonkim/pyshield
+          path: ${GITHUB_WORKSPACE}/pace/pySHiELD
+          ref: 20250908_namelist_2
+          fetch-depth: 0
+
       - name: "Janice's Sanity Check 1"
         run: |
           echo "GITHUB_WORKSPACE: " ${GITHUB_WORKSPACE}
-          echo "inputs.component_name: " ${{ inputs.component_name }}
-          echo "inputs.component_trigger: " ${{ inputs.component_trigger }}
           echo "pwd: "
           pwd
-          echo "ls ${GITHUB_WORKSPACE}"
-          ls ${GITHUB_WORKSPACE}
+          echo "ls ${GITHUB_WORKSPACE}/pace"
+          ls "${GITHUB_WORKSPACE}/pace"
+          echo ""
+          echo "ls ${GITHUB_WORKSPACE}/NDSL"
+          ls "${GITHUB_WORKSPACE}/pace/NDSL"
+          echo ""
+          echo "ls ${GITHUB_WORKSPACE}/pace/pyFV3"
+          ls "${GITHUB_WORKSPACE}/pace/pyFV3"
+          echo ""
+          echo "ls ${GITHUB_WORKSPACE}/pace/pySHiELD"
+          ls "${GITHUB_WORKSPACE}/pace/pySHiELD"
+          echo ""
 
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
