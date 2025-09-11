@@ -40,7 +40,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout pace@20250908_namelist_2"
-        if: ${{ inputs.component_trigger }}
         uses: actions/checkout@v5
         with:
           submodules: 'false'
@@ -111,12 +110,6 @@ jobs:
         if: ${{ inputs.component_trigger }}
         run: rm -rf ${GITHUB_WORKSPACE}/pace/${{inputs.component_name}}
 
-      - name: Checkout out hash that triggered CI
-        uses: actions/checkout@v4
-        with:
-          submodules: 'false'
-          path: pace/${{inputs.component_name}}
-
       - name: "Sanity Check 2"
         run: |
           git -C ${GITHUB_WORKSPACE}/pace log -1
@@ -128,8 +121,12 @@ jobs:
         shell: bash -l {0}
         run: |
           cd ${GITHUB_WORKSPACE}/pace
-          pip install .[test]
+          pip install dask==2025.7.0
           pip install numpy==1.26.4
+          pip install .[test]
+          pip install dask==2025.7.0
+          pip install numpy==1.26.4
+          #conda remove sqlite
 
       - name: Print versions
         shell: bash -l {0}
