@@ -55,6 +55,42 @@ jobs:
         shell: bash -l {0}
         run: pip install mpich
 
+      - name: Checkout Pace
+        uses: actions/checkout@v5
+        with:
+          submodules: 'false'
+
+      - name: "Checkout NDSL"
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          repository: jjuyeonkim/ndsl
+          path: pace/NDSL
+          ref: 20250908_namelist_2
+
+      - name: "Checkout pyFV3"
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          repository: jjuyeonkim/pyfv3
+          path: pace/pyFV3
+          ref: 20250908_namelist_2
+
+      - name: "Checkout pySHiELD"
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          repository: jjuyeonkim/pyshield
+          path: pace/pySHiELD
+          ref: 20250908_namelist_2
+
+      - name: "Git log checks"
+        run: |
+          git -C ${GITHUB_WORKSPACE}/pace log -1
+          git -C ${GITHUB_WORKSPACE}/pace/NDSL log -1
+          git -C ${GITHUB_WORKSPACE}/pace/pyFV3 log -1
+          git -C ${GITHUB_WORKSPACE}/pace/pySHiELD log -1
+
       - name: "External trigger: Remove existing component in pace/develop"
         shell: bash -l {0}
         if: ${{ inputs.component_trigger }}
@@ -65,6 +101,7 @@ jobs:
         with:
           submodules: 'recursive'
           path: pace/${{inputs.component_name}}
+          ref: 20250908_namelist_2
 
       - name: Install packages
         shell: bash -l {0}
