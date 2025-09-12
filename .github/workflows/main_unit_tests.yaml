@@ -7,8 +7,7 @@
 #
 # For now, I'm manually doing checkouts of NDSL, pyFV3, pySHiELD
 # submodules because I don't know of a better way to checkout
-# submodules using a specific branch name. I've also
-# commented out the step "Checkout out hash that triggered CI"
+# submodules using a specific branch name.
 #
 name: "pace main unit tests"
 
@@ -39,59 +38,16 @@ jobs:
   pace_main_unit_tests:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout pace@20250908_namelist_2"
+      - name: "External trigger: Checkout jjuyeonkim/pace@20250908_namelist_2"
+        if: ${{ inputs.component_trigger }}
         uses: actions/checkout@v5
         with:
-          submodules: 'false'
+          submodules: 'recursive'
+          repository: NOAA-GFDL/pace
+          submodules: 'recursive'
           repository: jjuyeonkim/pace
           path: pace
           ref: 20250908_namelist_2
-          fetch-depth: 0
-
-      - name: "Checkout NDSL"
-        uses: actions/checkout@v5
-        with:
-          submodules: 'recursive'
-          repository: jjuyeonkim/ndsl
-          path: pace/NDSL
-          ref: 20250908_namelist_2
-          fetch-depth: 0
-
-      - name: "Checkout pyFV3"
-        uses: actions/checkout@v5
-        with:
-          submodules: 'recursive'
-          repository: jjuyeonkim/pyfv3
-          path: pace/pyFV3
-          ref: 20250908_namelist_2
-          fetch-depth: 0
-
-      - name: "Checkout pySHiELD"
-        uses: actions/checkout@v5
-        with:
-          submodules: 'recursive'
-          repository: jjuyeonkim/pyshield
-          path: pace/pySHiELD
-          ref: 20250908_namelist_2
-          fetch-depth: 0
-
-      - name: "Sanity Check 1"
-        run: |
-          echo "GITHUB_WORKSPACE: " ${GITHUB_WORKSPACE}
-          echo "pwd: "
-          pwd
-          echo "ls ${GITHUB_WORKSPACE}/pace"
-          ls "${GITHUB_WORKSPACE}/pace"
-          echo ""
-          echo "ls ${GITHUB_WORKSPACE}/pace/NDSL"
-          ls "${GITHUB_WORKSPACE}/pace/NDSL"
-          echo ""
-          echo "ls ${GITHUB_WORKSPACE}/pace/pyFV3"
-          ls "${GITHUB_WORKSPACE}/pace/pyFV3"
-          echo ""
-          echo "ls ${GITHUB_WORKSPACE}/pace/pySHiELD"
-          ls "${GITHUB_WORKSPACE}/pace/pySHiELD"
-          echo ""
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v3
@@ -110,23 +66,18 @@ jobs:
         if: ${{ inputs.component_trigger }}
         run: rm -rf ${GITHUB_WORKSPACE}/pace/${{inputs.component_name}}
 
-      - name: "Sanity Check 2"
-        run: |
-          git -C ${GITHUB_WORKSPACE}/pace log -1
-          git -C ${GITHUB_WORKSPACE}/pace/NDSL log -1
-          git -C ${GITHUB_WORKSPACE}/pace/pyFV3 log -1
-          git -C ${GITHUB_WORKSPACE}/pace/pySHiELD log -1
+      - name: Checkout out hash that triggered CI
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          path: pace/${{inputs.component_name}}
 
       - name: Install packages
         shell: bash -l {0}
         run: |
           cd ${GITHUB_WORKSPACE}/pace
-          pip install dask==2025.7.0
-          pip install numpy==1.26.4
           pip install .[test]
-          pip install dask==2025.7.0
           pip install numpy==1.26.4
-          #conda remove sqlite
 
       - name: Print versions
         shell: bash -l {0}

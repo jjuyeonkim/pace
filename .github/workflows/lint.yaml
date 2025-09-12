@@ -12,10 +12,41 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Pace
+        uses: actions/checkout@v5
+        with:
+          submodules: 'false'
+
+      - name: "Checkout NDSL"
         uses: actions/checkout@v5
         with:
           submodules: 'recursive'
+          repository: jjuyeonkim/ndsl
+          path: pace/NDSL
+          ref: 20250908_namelist_2
+
+      - name: "Checkout pyFV3"
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          repository: jjuyeonkim/pyfv3
+          path: pace/pyFV3
+          ref: 20250908_namelist_2
+
+      - name: "Checkout pySHiELD"
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          repository: jjuyeonkim/pyshield
+          path: pace/pySHiELD
+          ref: 20250908_namelist_2
+
+      - name: "Git log checks"
+        run: |
+          git -C ${GITHUB_WORKSPACE}/pace log -1
+          git -C ${GITHUB_WORKSPACE}/pace/NDSL log -1
+          git -C ${GITHUB_WORKSPACE}/pace/pyFV3 log -1
+          git -C ${GITHUB_WORKSPACE}/pace/pySHiELD log -1
 
       - name: Step Python 3.11
         uses: actions/setup-python@v5
