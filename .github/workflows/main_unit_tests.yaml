@@ -5,10 +5,6 @@
 # https://github.com/NOAA-GFDL/PySHiELD/pull/58
 # https://github.com/NOAA-GFDL/pace/pull/145
 #
-# For now, I'm manually doing checkouts of NDSL, pyFV3, pySHiELD
-# submodules because I don't know of a better way to checkout
-# submodules using a specific branch name.
-#
 name: "pace main unit tests"
 
 # Run these these whenever ...
@@ -42,8 +38,6 @@ jobs:
         if: ${{ inputs.component_trigger }}
         uses: actions/checkout@v5
         with:
-          submodules: 'recursive'
-          repository: NOAA-GFDL/pace
           submodules: 'recursive'
           repository: jjuyeonkim/pace
           path: pace
