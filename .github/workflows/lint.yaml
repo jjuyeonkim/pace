@@ -6,7 +6,7 @@ on:
   merge_group: # ... the PR is added to the merge queue
   push:
     branches:
-      - main # ... when merging into the main branch
+      - 20250908_namelist_4_CI_TEST
 
 jobs:
   lint:
