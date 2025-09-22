@@ -21,6 +21,66 @@ if not folder.exists():
 if not folder.is_dir():
     raise ValueError(f"Expected '{folder}' to be a directory.")
 
+
+# TODO: jk REMOVE IF NOT NEEDED!!
+# Values taken from SHIELD 3d modon test run
+# RESTART/fv_core.res.nc
+#
+# for 3d modon case:
+# km = 5
+ak = xr.DataArray(
+    dims=["km1"],
+    attrs=dict(units="Pa", _FillValue=False),
+    data=np.array(
+        [50000, 40000, 30000, 20000, 10000, 0]
+    ),
+)
+bk = xr.DataArray(
+    dims=["km1"],
+    attrs=dict(units="None", _FillValue=False),
+    data=np.array(
+        [0, 0.2, 0.4, 0.6, 0.8, 1]
+    ),
+)
+coefficients = xr.Dataset(data_vars={"ak": ak, "bk": bk})
+coefficients.to_netcdf(Path(folder) / "eta5.nc")
+
+
+# TODO: jk REMOVE IF NOT NEEDED!!
+# Values taken from SHIELD baroclinic test run
+# RESTART/fv_core.res.nc
+#
+# km = 32
+ak = xr.DataArray(
+    dims=["km1"],
+    attrs=dict(units="Pa", _FillValue=False),
+    data=np.array(
+        [
+            100, 400, 818.60211, 1378.88653, 2091.79519, 2983.64084,
+            4121.7896, 5579.22148, 6907.19063, 7735.78639, 8197.66476,
+            8377.95525, 8331.69594, 8094.72213, 7690.85756, 7139.01788,
+            6464.80251, 5712.35727, 4940.05347, 4198.60465, 3516.63294,
+            2905.19863, 2366.73733, 1899.19455, 1497.78137, 1156.25252,
+            867.79199, 625.59324, 423.21322, 254.76613, 115.06646, 0, 0,
+        ]
+    ),
+)
+bk = xr.DataArray(
+    dims=["km1"],
+    attrs=dict(units="None", _FillValue=False),
+    data=np.array(
+        [
+            0, 0, 0, 0, 0, 0, 0, 0, 0.00513, 0.01969, 0.04299, 0.07477,
+            0.11508, 0.16408, 0.22198, 0.28865, 0.36281, 0.44112, 0.51882,
+            0.59185, 0.6581, 0.71694, 0.76843, 0.81293, 0.851, 0.88331,
+            0.91055, 0.93338, 0.95244, 0.96828, 0.98142, 0.99223, 1,
+        ]
+    ),
+)
+coefficients = xr.Dataset(data_vars={"ak": ak, "bk": bk})
+coefficients.to_netcdf(Path(folder) / "eta32.nc")
+
+
 # km = 79
 ak = xr.DataArray(
     dims=["km1"],
