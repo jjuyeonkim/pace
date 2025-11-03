@@ -14,6 +14,7 @@ from ndsl.grid import (
     ContravariantGridData,
     DampingCoefficients,
     DriverGridData,
+    GridConfig,
     GridData,
     HorizontalGridData,
     MetricTerms,
@@ -22,7 +23,6 @@ from ndsl.grid import (
 from ndsl.grid.stretch_transformation import direct_transform
 from ndsl.stencils.testing import TranslateGrid, grid
 from ndsl.typing import Communicator
-from ndsl.utils import grid_params_from_f90nml
 from pace.registry import Registry
 
 
@@ -152,8 +152,8 @@ class SerialboxGridConfig(GridInitializer):
         return f90nml.read(self.path + "/input.nml")
 
     @property
-    def _grid_params(self) -> dict:
-        return grid_params_from_f90nml(self._f90_namelist)
+    def _grid_config(self) -> GridConfig:
+        return GridConfig.from_f90nml(self._f90_namelist)
 
     def _serializer(self, communicator: Communicator):
         import serialbox
@@ -172,7 +172,7 @@ class SerialboxGridConfig(GridInitializer):
     ) -> grid.Grid:  # type: ignore
         ser = self._serializer(communicator)
         grid = TranslateGrid.new_from_serialized_data(
-            ser, communicator.rank, self._grid_params["layout"], backend
+            ser, communicator.rank, self._grid_config.layout, backend
         ).python_grid()
         return grid
 
